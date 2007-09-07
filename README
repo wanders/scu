@@ -1,0 +1,13 @@
+
+Not very finished.
+
+(C)2007 Anders Waldenborg anders@0x63.nu
+
+
+Pros:
+ * Less boilerplate code
+ * Tests loaded from separate .so files
+
+Cons:
+ * Portability suffers
+
