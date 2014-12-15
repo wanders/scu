@@ -15,4 +15,4 @@ clean:
 	rm -f runner test_*.so *.o runner.o *~
 
 %.o: %.c
-	$(CC) -c -o $@ $< -Wall
+	$(CC) -c -o $@ $< -Wall -fPIC

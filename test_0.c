@@ -48,7 +48,6 @@ TEST(test_fprintf, "test of fprintf()")
    int i1 = 10;
 
    if (NULL != temp_file) {
-      CU_ASSERT(0 == fprintf(temp_file, ""));
       CU_ASSERT(2 == fprintf(temp_file, "Q\n"));
       CU_ASSERT(7 == fprintf(temp_file, "i1 = %d", i1));
    }
@@ -61,7 +60,7 @@ TEST(test_fprintf, "test of fprintf()")
  */
 TEST(test_fread, "test of fread()")
 {
-   unsigned char buffer[20];
+   char buffer[20];
 
    if (NULL != temp_file) {
       rewind(temp_file);
