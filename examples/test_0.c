@@ -14,42 +14,38 @@ static FILE* temp_file = NULL;
  * Opens the temporary file used by the tests.
  * Returns zero on success, non-zero otherwise.
  */
-INIT("Suite_1")
+SCU_SUITE ("Suite_1");
+
+SCU_SETUP ()
 {
-   if (NULL == (temp_file = fopen("temp.txt", "w+"))) {
-      return -1;
-   }
-   else {
-      return 0;
-   }
+  temp_file = fopen ("temp.txt", "w+");
 }
 
 /* The suite cleanup function.
  * Closes the temporary file used by the tests.
  * Returns zero on success, non-zero otherwise.
  */
-CLEANUP()
+SCU_TEARDOWN ()
 {
-   if (0 != fclose(temp_file)) {
-      return -1;
-   }
-   else {
-      temp_file = NULL;
-      return 0;
-   }
+  if (0 != fclose (temp_file)) {
+    return;
+  }
+  else {
+    temp_file = NULL;
+  }
 }
 
 /* Simple test of fprintf().
  * Writes test data to the temporary file and checks
  * whether the expected number of bytes were written.
  */
-TEST(test_fprintf, "test of fprintf()")
+SCU_TEST (test_fprintf, "test of fprintf()")
 {
    int i1 = 10;
 
    if (NULL != temp_file) {
-      CU_ASSERT(2 == fprintf(temp_file, "Q\n"));
-      CU_ASSERT(7 == fprintf(temp_file, "i1 = %d", i1));
+      SCU_ASSERT(2 == fprintf (temp_file, "Q\n"));
+      SCU_ASSERT(7 == fprintf (temp_file, "i1 = %d", i1));
    }
 }
 
@@ -58,13 +54,13 @@ TEST(test_fprintf, "test of fprintf()")
  * and checks whether the expected characters are present.
  * Must be run after testFPRINTF().
  */
-TEST(test_fread, "test of fread()")
+SCU_TEST (test_fread, "test of fread()")
 {
    char buffer[20];
 
    if (NULL != temp_file) {
       rewind(temp_file);
-      CU_ASSERT(9 == fread(buffer, sizeof(unsigned char), 20, temp_file));
-      CU_ASSERT(0 == strncmp(buffer, "Q\ni1 = 10", 9));
+      SCU_ASSERT (9 == fread (buffer, sizeof(unsigned char), 20, temp_file));
+      SCU_ASSERT_NSTRING_EQUAL (buffer, "Q\ni1 = 10", 9);
    }
 }

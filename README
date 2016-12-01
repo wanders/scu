@@ -1,13 +1,21 @@
+# Simple C Unit Test Framework (SCU)
 
-Not very finished.
+SCU is a simple C unit testing framework that integrates with _STR_, the simple test runner.
 
-(C)2007 Anders Waldenborg anders@0x63.nu
+## Writing tests
 
+TODO: document how to create unit test suites
 
-Pros:
- * Less boilerplate code
- * Tests loaded from separate .so files
+## Compiling tests
 
-Cons:
- * Portability suffers
+TODO: mention that we need to compile the tests with the `-ljansson` flag
 
+## Executing tests
+
+TODO: document how to run the tests with STR
+
+## Dependencies
+
+Since the STR protocol uses JSON to relay the messages between the test suite and the test runner, we need `libjansson` to be installed. On Ubuntu you should be able to install this using the following command:
+
+  apt install libjansson-dev
