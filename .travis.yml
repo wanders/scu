@@ -1,0 +1,22 @@
+matrix:
+  include:
+    - language: python
+      python:
+        - "2.7"
+        - "3.5"
+        - "3.6"
+      install:
+        - pip install tox
+      script:
+        - tox -e $(echo py$TRAVIS_PYTHON_VERSION | tr -d .)
+    - os: linux
+      addons:
+        apt:
+          sources:
+            - llvm-toolchain-trusty-5.0
+          packages:
+            - clang-format-5.0
+      script:
+        - 'find -name "*.[ch]" -exec clang-format-5.0 -style=file -i {} +'
+        - git diff
+        - git diff-index --quiet HEAD
