@@ -1,11 +1,11 @@
 #include <assert.h>
-#include <jansson.h>
 #include <stdlib.h>
 #include <sys/ioctl.h>
 #include <time.h>
 #include <unistd.h>
 
 #include "scu.h"
+#include "json.h"
 
 /* Optional hook functions */
 
@@ -55,32 +55,58 @@ _scu_get_time_diff (struct timespec startt, struct timespec endt)
 }
 
 static void
-_scu_capture_test_failures (json_t *json_test, size_t num, _scu_failure *failures)
+_scu_capture_test_failure (int fd, _scu_failure *failure)
 {
-	json_t *json_failures = json_array ();
-	json_object_set (json_test, "failures", json_failures);
-
-	for (size_t i = 0; i < num; i++) {
-		json_t *json_failure = json_object ();
-		json_object_set (json_failure, "file", json_string (failures[i].file));
-		json_object_set (json_failure, "line", json_integer (failures[i].line));
-		json_object_set (json_failure, "message", json_string (failures[i].msg));
-		json_array_append (json_failures, json_failure);
-	}
+	json_object_start (fd);
+	json_object_key (fd, "file");
+	json_string (fd, failure->file);
+	json_separator (fd);
+	json_object_key (fd, "line");
+	json_integer (fd, failure->line);
+	json_separator (fd);
+	json_object_key (fd, "message");
+	json_string (fd, failure->msg);
+	json_object_end (fd);
 }
 
 static void
-_scu_capture_test_result (json_t *json_test, bool success, size_t asserts,
-                          double mono_time, double cpu_time)
+_scu_capture_test_failures (int fd, size_t num, _scu_failure *failures)
 {
-	json_object_set (json_test, "success", json_boolean (success));
-	json_object_set (json_test, "asserts", json_integer (asserts));
-	json_object_set (json_test, "duration", json_real (mono_time));
-	json_object_set (json_test, "cpu_time", json_real (cpu_time));
+	json_separator (fd);
+	json_object_key (fd, "failures");
+	json_array_start (fd);
+
+	if (num > 0) {
+		_scu_capture_test_failure (fd, &failures[0]);
+		for (size_t i = 1; i < num; i++) {
+			json_separator (fd);
+			_scu_capture_test_failure (fd, &failures[i]);
+		}
+	}
+
+	json_array_end (fd);
 }
 
-json_t *
-_scu_run_test (_scu_testcase *test)
+static void
+_scu_capture_test_result (int fd, bool success, size_t asserts,
+                          double mono_time, double cpu_time)
+{
+	json_separator (fd);
+	json_object_key (fd, "success");
+	json_boolean (fd, success);
+	json_separator (fd);
+	json_object_key (fd, "asserts");
+	json_integer (fd, asserts);
+	json_separator (fd);
+	json_object_key (fd, "duration");
+	json_real (fd, mono_time);
+	json_separator (fd);
+	json_object_key (fd, "cpu_time");
+	json_real (fd, cpu_time);
+}
+
+static void
+_scu_run_test (int fd, _scu_testcase *test)
 {
 	char temp_filename[] = "/tmp/scu.XXXXXX";
 	int out = mkstemp (temp_filename);
@@ -90,10 +116,15 @@ _scu_run_test (_scu_testcase *test)
 	setvbuf (stdout, NULL, _IONBF, 0);
 	setvbuf (stderr, NULL, _IONBF, 0);
 
-	json_t *json_test = json_object ();
-	json_object_set (json_test, "event", json_string ("testcase"));
-	json_object_set (json_test, "output", json_string (temp_filename));
-	json_object_set (json_test, "description", json_string (test->desc));
+	json_object_start (fd);
+	json_object_key (fd, "event");
+	json_string (fd, "testcase");
+	json_separator (fd);
+	json_object_key (fd, "output");
+	json_string (fd, temp_filename);
+	json_separator (fd);
+	json_object_key (fd, "description");
+	json_string (fd, test->desc);
 
 	struct timespec start_mono_time, end_mono_time, start_cpu_time, end_cpu_time;
 
@@ -112,21 +143,18 @@ _scu_run_test (_scu_testcase *test)
 
 	_scu_after_each ();
 
-	_scu_capture_test_failures (json_test, num_failures, failures);
+	_scu_capture_test_failures (fd, num_failures, failures);
 
-	_scu_capture_test_result (json_test, success, asserts,
+	_scu_capture_test_result (fd, success, asserts,
 	                          _scu_get_time_diff (start_mono_time, end_mono_time),
 													  _scu_get_time_diff (start_cpu_time, end_cpu_time));
 
-	return json_test;
+	json_object_end (fd);
 }
 
-void
-_scu_write_json (int fd, json_t *json)
+static void
+_scu_flush_json (int fd)
 {
-	char *msg = json_dumps (json, 0);
-	write (fd, msg, strlen (msg));
-	free (msg);
 	write (fd, "\n", 1);
 }
 
@@ -135,24 +163,32 @@ main (int argc, char **argv)
 {
 	int cmd = dup (STDOUT_FILENO);
 
-	json_t *json_suite_start = json_object ();
-	json_object_set (json_suite_start, "name", json_string (_scu_suite_name));
-	json_object_set (json_suite_start, "event", json_string ("suite_start"));
-	_scu_write_json (cmd, json_suite_start);
+	json_object_start (cmd);
+	json_object_key (cmd, "name");
+	json_string (cmd, _scu_suite_name);
+	json_separator (cmd);
+	json_object_key (cmd, "event");
+	json_string (cmd, "suite_start");
+	json_object_end (cmd);
+	_scu_flush_json (cmd);
 
 	_scu_setup ();
 
 	for (_scu_testcase *test = &_scu_testcases_start; test < &_scu_testcases_end; test++) {
-		json_t *json_test = _scu_run_test (test);
-		_scu_write_json (cmd, json_test);
+		_scu_run_test (cmd, test);
+		_scu_flush_json (cmd);
 	}
 
 	_scu_teardown ();
 
-	json_t *json_suite_end = json_object ();
-	json_object_set (json_suite_end, "name", json_string (_scu_suite_name));
-	json_object_set (json_suite_end, "event", json_string ("suite_end"));
-	_scu_write_json (cmd, json_suite_end);
+	json_object_start (cmd);
+	json_object_key (cmd, "name");
+	json_string (cmd, _scu_suite_name);
+	json_separator (cmd);
+	json_object_key (cmd, "event");
+	json_string (cmd, "suite_end");
+	json_object_end (cmd);
+	_scu_flush_json (cmd);
 
 	return 0;
 }

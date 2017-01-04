@@ -11,7 +11,7 @@ clean::
 	rm -f $(TESTCASES) $(patsubst %,%.o,$(TESTCASES))
 
 $(TESTCASES): %:%.o
-	$(CC) -o $@ $< $(SCU_DIR)/scu.c -ljansson -Wl,$(SCU_DIR)/testcases.lds
+	$(CC) -o $@ $< $(SCU_DIR)/scu.c -Wl,$(SCU_DIR)/testcases.lds
 
 %.o: %.c
 	$(CC) -c -o $@ $< $(CFLAGS)
