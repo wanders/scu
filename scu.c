@@ -55,7 +55,7 @@ _scu_get_time_diff (struct timespec startt, struct timespec endt)
 }
 
 static void
-_scu_capture_test_failures (json_t *json_test, size_t num, _scu_failure_t *failures)
+_scu_capture_test_failures (json_t *json_test, size_t num, _scu_failure *failures)
 {
 	json_t *json_failures = json_array ();
 	json_object_set (json_test, "failures", json_failures);
@@ -80,7 +80,7 @@ _scu_capture_test_result (json_t *json_test, bool success, size_t asserts,
 }
 
 json_t *
-_scu_run_test (_scu_testcase_t *test)
+_scu_run_test (_scu_testcase *test)
 {
 	char temp_filename[] = "/tmp/scu.XXXXXX";
 	int out = mkstemp (temp_filename);
@@ -102,7 +102,7 @@ _scu_run_test (_scu_testcase_t *test)
 	clock_gettime (CLOCK_MONOTONIC, &start_mono_time);
 	clock_gettime (CLOCK_PROCESS_CPUTIME_ID, &start_cpu_time);
 
-	_scu_failure_t failures[_SCU_MAX_FAILURES];
+	_scu_failure failures[_SCU_MAX_FAILURES];
 	bool success = true;
 	size_t asserts = 0, num_failures = 0;
 	test->func (&success, &asserts, &num_failures, failures);
@@ -142,7 +142,7 @@ main (int argc, char **argv)
 
 	_scu_setup ();
 
-	for (_scu_testcase_t *test = &_scu_testcases_start; test < &_scu_testcases_end; test++) {
+	for (_scu_testcase *test = &_scu_testcases_start; test < &_scu_testcases_end; test++) {
 		json_t *json_test = _scu_run_test (test);
 		_scu_write_json (cmd, json_test);
 	}
