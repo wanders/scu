@@ -17,6 +17,11 @@
 
 /* Test suite functions */
 
+void _scu_setup (void);
+void _scu_teardown (void);
+void _scu_before_each (void);
+void _scu_after_each (void);
+
 #define SCU_SUITE(name) \
 	const char *_scu_suite_name = name
 

@@ -9,11 +9,6 @@
 
 /* Optional hook functions */
 
-void _scu_setup (void);
-void _scu_teardown (void);
-void _scu_before_each (void);
-void _scu_after_each (void);
-
 __attribute__ ((weak)) void
 _scu_setup (void)
 {
