@@ -55,7 +55,29 @@ _scu_get_time_diff (struct timespec startt, struct timespec endt)
 }
 
 static void
-_scu_capture_test_failure (int fd, _scu_failure *failure)
+_scu_flush_json (int fd)
+{
+	write (fd, "\n", 1);
+}
+
+static void
+_scu_output_test_start (int fd, const char *filename, const char *description)
+{
+	json_object_start (fd);
+	json_object_key (fd, "event");
+	json_string (fd, "testcase_start");
+	json_separator (fd);
+	json_object_key (fd, "output");
+	json_string (fd, filename);
+	json_separator (fd);
+	json_object_key (fd, "description");
+	json_string (fd, description);
+	json_object_end (fd);
+	_scu_flush_json (fd);
+}
+
+static void
+_scu_output_test_failure (int fd, _scu_failure *failure)
 {
 	json_object_start (fd);
 	json_object_key (fd, "file");
@@ -70,17 +92,17 @@ _scu_capture_test_failure (int fd, _scu_failure *failure)
 }
 
 static void
-_scu_capture_test_failures (int fd, size_t num, _scu_failure *failures)
+_scu_output_test_failures (int fd, size_t num, _scu_failure *failures)
 {
 	json_separator (fd);
 	json_object_key (fd, "failures");
 	json_array_start (fd);
 
 	if (num > 0) {
-		_scu_capture_test_failure (fd, &failures[0]);
+		_scu_output_test_failure (fd, &failures[0]);
 		for (size_t i = 1; i < num; i++) {
 			json_separator (fd);
-			_scu_capture_test_failure (fd, &failures[i]);
+			_scu_output_test_failure (fd, &failures[i]);
 		}
 	}
 
@@ -88,9 +110,13 @@ _scu_capture_test_failures (int fd, size_t num, _scu_failure *failures)
 }
 
 static void
-_scu_capture_test_result (int fd, bool success, size_t asserts,
-                          double mono_time, double cpu_time)
+_scu_output_test_end (int fd, bool success, size_t asserts,
+                      double mono_time, double cpu_time,
+                      size_t num_failures, _scu_failure *failures)
 {
+	json_object_start (fd);
+	json_object_key (fd, "event");
+	json_string (fd, "testcase_end");
 	json_separator (fd);
 	json_object_key (fd, "success");
 	json_boolean (fd, success);
@@ -103,6 +129,11 @@ _scu_capture_test_result (int fd, bool success, size_t asserts,
 	json_separator (fd);
 	json_object_key (fd, "cpu_time");
 	json_real (fd, cpu_time);
+
+	_scu_output_test_failures (fd, num_failures, failures);
+
+	json_object_end (fd);
+	_scu_flush_json (fd);
 }
 
 static void
@@ -116,15 +147,7 @@ _scu_run_test (int fd, _scu_testcase *test)
 	setvbuf (stdout, NULL, _IONBF, 0);
 	setvbuf (stderr, NULL, _IONBF, 0);
 
-	json_object_start (fd);
-	json_object_key (fd, "event");
-	json_string (fd, "testcase");
-	json_separator (fd);
-	json_object_key (fd, "output");
-	json_string (fd, temp_filename);
-	json_separator (fd);
-	json_object_key (fd, "description");
-	json_string (fd, test->desc);
+	_scu_output_test_start (fd, temp_filename, test->desc);
 
 	struct timespec start_mono_time, end_mono_time, start_cpu_time, end_cpu_time;
 
@@ -143,19 +166,10 @@ _scu_run_test (int fd, _scu_testcase *test)
 
 	_scu_after_each ();
 
-	_scu_capture_test_failures (fd, num_failures, failures);
-
-	_scu_capture_test_result (fd, success, asserts,
-	                          _scu_get_time_diff (start_mono_time, end_mono_time),
-													  _scu_get_time_diff (start_cpu_time, end_cpu_time));
-
-	json_object_end (fd);
-}
-
-static void
-_scu_flush_json (int fd)
-{
-	write (fd, "\n", 1);
+	_scu_output_test_end (fd, success, asserts,
+	                      _scu_get_time_diff (start_mono_time, end_mono_time),
+	                      _scu_get_time_diff (start_cpu_time, end_cpu_time),
+	                      num_failures, failures);
 }
 
 int
@@ -176,7 +190,6 @@ main (int argc, char **argv)
 
 	for (_scu_testcase *test = &_scu_testcases_start; test < &_scu_testcases_end; test++) {
 		_scu_run_test (cmd, test);
-		_scu_flush_json (cmd);
 	}
 
 	_scu_teardown ();

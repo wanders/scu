@@ -28,7 +28,18 @@ class Testcase:
         if line == b'':
             self.finished = True
             return None
-        return json.loads(line.decode())
+        try:
+            event = json.loads(line.decode())
+        except ValueError:
+            event = {
+                'event': 'testcase_end',
+                'success': False,
+                'asserts': 0,
+                'duration': 0,
+                'cpu_time': 0,
+                'failures': []
+            }
+        return event
 
     def fileno(self):
         return self.proc.stdout.fileno()
@@ -79,24 +90,30 @@ class Observer:
 
 class TestEmitter(Observer):
 
+    def __init__(self):
+        self.start_event = None
+
     def handle_suite_start(self, event):
         print("  {[name]}".format(event))
 
-    def handle_testcase(self, event):
+    def handle_testcase_start(self, event):
+        self.start_event = event
+
+    def handle_testcase_end(self, event):
         self.print_testcase(event)
 
     def print_testcase(self, event):
         result = (Colors.GREEN + "PASS") if event['success'] else (Colors.RED + "FAIL")
-        print("    [ {result}{colors.DEFAULT} ] {colors.GRAY}{event[description]}{colors.DEFAULT} ({event[duration]:.3f} ms)".format(event=event, result=result, colors=Colors))
+        print("    [ {result}{colors.DEFAULT} ] {colors.GRAY}{start_event[description]}{colors.DEFAULT} ({end_event[duration]:.3f} ms)".format(start_event=self.start_event, end_event=event, result=result, colors=Colors))
         if not event['success']:
             for failure in event['failures']:
                 print("           * " + failure['message'])
                 print("             @ {file}:{line}".format(**failure))
-            with open(event['output']) as f:
+            with open(self.start_event['output']) as f:
                 for line in f:
                     print("           > " + line, end='')
         # FIXME: This will remove the output file for all other observers; it should probably be somewhere else
-        os.unlink(event['output'])
+        os.unlink(self.start_event['output'])
 
 
 class SummaryEmitter(Observer):
@@ -114,7 +131,7 @@ class SummaryEmitter(Observer):
     def handle_suite_start(self, event):
         self.has_reported_failing_test = False
 
-    def handle_testcase(self, event):
+    def handle_testcase_end(self, event):
         self.assert_counter += event['asserts']
         self.assert_fail_counter += len(event['failures'])
         self.test_counter += 1
