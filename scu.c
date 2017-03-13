@@ -195,7 +195,7 @@ _scu_run_test (int fd, _scu_testcase *test)
 }
 
 int
-main (int argc, char **argv)
+main (void)
 {
 	int cmd = dup (STDOUT_FILENO);
 
