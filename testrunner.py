@@ -112,8 +112,6 @@ class TestEmitter(Observer):
             with open(self.start_event['output']) as f:
                 for line in f:
                     print("           > " + line, end='')
-        # FIXME: This will remove the output file for all other observers; it should probably be somewhere else
-        os.unlink(self.start_event['output'])
 
 
 class SummaryEmitter(Observer):
@@ -173,10 +171,26 @@ class SummaryEmitter(Observer):
         ))
 
 
+class TestCleaner(Observer):
+
+    def __init__(self):
+        self.start_event = None
+
+    def handle_testcase_start(self, event):
+        self.start_event = event
+
+    def handle_testcase_end(self, event):
+        self.clean_testcase()
+
+    def clean_testcase(self):
+        os.unlink(self.start_event['output'])
+
+
 if __name__ == '__main__':
     runner = Runner(sys.argv[1:])
     emitter = SummaryEmitter()
     runner.register(TestEmitter())
     runner.register(emitter)
+    runner.register(TestCleaner())
     runner.run_tests()
     emitter.print_summary()
