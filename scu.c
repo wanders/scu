@@ -61,6 +61,33 @@ _scu_flush_json (int fd)
 }
 
 static void
+_scu_output_suite_start (int fd, const char *suitename)
+{
+	json_object_start (fd);
+	json_object_key (fd, "name");
+	json_string (fd, suitename);
+	json_separator (fd);
+	json_object_key (fd, "event");
+	json_string (fd, "suite_start");
+	json_object_end (fd);
+	_scu_flush_json (fd);
+}
+
+
+static void
+_scu_output_suite_end (int fd, const char *suitename)
+{
+	json_object_start (fd);
+	json_object_key (fd, "name");
+	json_string (fd, suitename);
+	json_separator (fd);
+	json_object_key (fd, "event");
+	json_string (fd, "suite_end");
+	json_object_end (fd);
+	_scu_flush_json (fd);
+}
+
+static void
 _scu_output_test_start (int fd, const char *filename, const char *description)
 {
 	json_object_start (fd);
@@ -177,14 +204,7 @@ main (int argc, char **argv)
 {
 	int cmd = dup (STDOUT_FILENO);
 
-	json_object_start (cmd);
-	json_object_key (cmd, "name");
-	json_string (cmd, _scu_suite_name);
-	json_separator (cmd);
-	json_object_key (cmd, "event");
-	json_string (cmd, "suite_start");
-	json_object_end (cmd);
-	_scu_flush_json (cmd);
+	_scu_output_suite_start (cmd, _scu_suite_name);
 
 	_scu_setup ();
 
@@ -194,14 +214,7 @@ main (int argc, char **argv)
 
 	_scu_teardown ();
 
-	json_object_start (cmd);
-	json_object_key (cmd, "name");
-	json_string (cmd, _scu_suite_name);
-	json_separator (cmd);
-	json_object_key (cmd, "event");
-	json_string (cmd, "suite_end");
-	json_object_end (cmd);
-	_scu_flush_json (cmd);
+	_scu_output_suite_end (cmd, _scu_suite_name);
 
 	return 0;
 }
