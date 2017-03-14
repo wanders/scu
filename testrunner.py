@@ -15,67 +15,91 @@ class Colors:
     DEFAULT = "\x1b[39m"
 
 
-class Testcase:
+class TestSuite:
 
     def __init__(self, test_path, idx):
         self.idx = idx
         self.finished = False
+        self.failed = False
         self.events = []
         self.proc = Popen([os.path.abspath(test_path)], stdout=PIPE)
 
-    def read_event(self):
-        line = self.proc.stdout.readline()
-        if line == b'':
+    def read_events(self):
+        # Check the status of the process
+        self.proc.poll()
+
+        # Yield all pending events
+        for line in self.proc.stdout:
+            try:
+                event = json.loads(line.decode())
+            except ValueError:
+                event = {
+                    'event': 'testcase_error',
+                    'message': "Failed to parse test case output",
+                    'crash': False
+                }
+            yield event
+
+        # Handle process completion
+        if self.proc.returncode is not None:
             self.finished = True
-            return None
-        try:
-            event = json.loads(line.decode())
-        except ValueError:
-            event = {
-                'event': 'testcase_end',
-                'success': False,
-                'asserts': 0,
-                'duration': 0,
-                'cpu_time': 0,
-                'failures': []
-            }
-        return event
+            if self.proc.returncode != 0:
+                self.failed = True
 
     def fileno(self):
         return self.proc.stdout.fileno()
 
+    def read(self, size):
+        return self.proc.stdout.read(size)
+
 
 class Runner:
 
-    def __init__(self, tests):
+    def __init__(self, suite_names):
+        self.suite_names = suite_names
         self.observers = []
-        self.tests = tests
+        self.cur_idx = 0
 
     def register(self, observer):
         self.observers.append(observer)
 
-    def run_tests(self):
-        tests = [Testcase(t, i) for i, t in enumerate(self.tests)]
-        running_tests = tests[:]
-        cur_idx = 0
-        while running_tests:
-            rs, _, _ = select(running_tests, [], [])
+    def run_suites(self):
+        suites = [TestSuite(t, i) for i, t in enumerate(self.suite_names)]
+        running_suites = suites[:]
+        while running_suites:
+            # Attempt to read from all running suites
+            rs, _, _ = select(running_suites, [], [])
             for r in rs:
-                event = r.read_event()
-                if event is None:
-                    running_tests.remove(r)
-                    while tests[cur_idx].finished:
-                        cur_idx += 1
-                        if cur_idx == len(tests):
+                # Handle all pending events
+                for event in r.read_events():
+                    self.handle_event(r, event)
+                # Handle suite completion
+                if r.finished:
+                    running_suites.remove(r)
+                    if r.failed:
+                        self.handle_event(r, {
+                            'event': 'testcase_error',
+                            'message': "Test suite crashed",
+                            'crash': True
+                        })
+                    # Handle all remaining completed suites
+                    while suites[self.cur_idx].finished:
+                        self.cur_idx += 1
+                        if self.cur_idx == len(suites):
                             break
-                        list(map(self.handle_event, tests[cur_idx].events))
-                else:
-                    if r.idx == cur_idx:
-                        self.handle_event(event)
-                    else:
-                        r.events.append(event)
+                        list(map(self.emit, suites[self.cur_idx].events))
 
-    def handle_event(self, event):
+    def handle_event(self, suite, event):
+        if not event:
+            return
+        # Emit the event if it belongs to the current suite
+        if suite.idx == self.cur_idx:
+            self.emit(event)
+        # Buffer the event for later if it belongs to any other suite
+        else:
+            suite.events.append(event)
+
+    def emit(self, event):
         for observer in self.observers:
             observer.call(event)
 
@@ -102,16 +126,26 @@ class TestEmitter(Observer):
     def handle_testcase_end(self, event):
         self.print_testcase(event)
 
+    def handle_testcase_error(self, event):
+        self.print_testcase(event)
+
     def print_testcase(self, event):
-        result = (Colors.GREEN + "PASS") if event['success'] else (Colors.RED + "FAIL")
-        print("    [ {result}{colors.DEFAULT} ] {colors.GRAY}{start_event[description]}{colors.DEFAULT} ({end_event[duration]:.3f} ms)".format(start_event=self.start_event, end_event=event, result=result, colors=Colors))
-        if not event['success']:
-            for failure in event['failures']:
-                print("           * " + failure['message'])
-                print("             @ {file}:{line}".format(**failure))
-            with open(self.start_event['output']) as f:
-                for line in f:
-                    print("           > " + line, end='')
+        event_type = event['event']
+        success = event['success'] if event_type == 'testcase_end' else False
+        result = (Colors.GREEN + "PASS") if success else (Colors.RED + "FAIL")
+        print("    [ {result}{colors.DEFAULT} ] {colors.GRAY}{event[description]}{colors.DEFAULT}".format(event=self.start_event, result=result, colors=Colors), end='')
+        if event_type == 'testcase_end':
+            print(" ({event[duration]:.3f} ms)".format(event=event))
+            if not success:
+                for failure in event['failures']:
+                    print("           * " + failure['message'])
+                    print("             @ {file}:{line}".format(**failure))
+                with open(self.start_event['output']) as f:
+                    for line in f:
+                        print("           > " + line, end='')
+        elif event_type == 'testcase_error':
+            print('')
+            print("           ! " + event['message'])
 
 
 class SummaryEmitter(Observer):
@@ -138,6 +172,13 @@ class SummaryEmitter(Observer):
         if event['failures']:
             self.test_fail_counter += 1
             self.has_reported_failing_test = True
+
+    def handle_testcase_error(self, event):
+        self.test_counter += 1
+        self.test_fail_counter += 1
+        if event['crash']:
+            self.suite_counter += 1
+            self.suite_fail_counter += 1
 
     def handle_suite_end(self, event):
         self.suite_counter += 1
@@ -182,6 +223,9 @@ class TestCleaner(Observer):
     def handle_testcase_end(self, event):
         self.clean_testcase()
 
+    def handle_testcase_error(self, event):
+        self.clean_testcase()
+
     def clean_testcase(self):
         os.unlink(self.start_event['output'])
 
@@ -192,5 +236,5 @@ if __name__ == '__main__':
     runner.register(TestEmitter())
     runner.register(emitter)
     runner.register(TestCleaner())
-    runner.run_tests()
+    runner.run_suites()
     emitter.print_summary()
