@@ -3,7 +3,7 @@ CFLAGS+=-Wall -I$(SCU_DIR)
 .PHONY: test build clean
 
 test: build
-	python $(SCU_DIR)/testrunner.py $(TESTCASES)
+	$(SCU_DIR)/testrunner $(TESTCASES)
 
 build: $(TESTCASES)
 
