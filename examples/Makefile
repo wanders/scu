@@ -1,4 +1,4 @@
-TESTCASES:=test_0 test_1 test_2
+TESTCASES:=file framework crash
 
 CFLAGS=-Wextra
 
@@ -6,4 +6,4 @@ SCU_DIR=..
 include $(SCU_DIR)/Makefile.scu
 
 clean::
-	rm -f temp.txt
+	rm -f temp.txt core
