@@ -142,12 +142,13 @@ class TestEmitter(Observer):
                 for failure in event['failures']:
                     print("           * " + failure['message'])
                     print("             @ {file}:{line}".format(**failure))
-                with open(self.start_event['output']) as f:
-                    for line in f:
-                        print("           > " + line, end='')
         elif event_type == 'testcase_error':
             print('')
             print("           ! " + event['message'])
+        if not success:
+            with open(self.start_event['output']) as f:
+                for line in f:
+                    print("           > " + line, end='')
 
 
 class SummaryEmitter(Observer):

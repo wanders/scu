@@ -12,6 +12,7 @@ SCU_TEST (before_crash, "This test will get executed")
 
 SCU_TEST (crash, "Test that should crash")
 {
+	printf ("Calling `abort`\n");
   abort();
 	SCU_ASSERT (true);
 }
