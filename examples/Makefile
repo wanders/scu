@@ -1,6 +1,6 @@
 TESTCASES:=file framework crash
 
-CFLAGS=-Wextra
+CFLAGS=-Wall -Werror -std=gnu11
 
 SCU_DIR=..
 include $(SCU_DIR)/Makefile.scu

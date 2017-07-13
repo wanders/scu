@@ -1,4 +1,4 @@
-CFLAGS+=-Wall -I$(SCU_DIR)
+CFLAGS+=-I$(SCU_DIR)
 
 .PHONY: test build clean
 
@@ -11,7 +11,7 @@ clean::
 	rm -f $(TESTCASES) $(patsubst %,%.o,$(TESTCASES))
 
 $(TESTCASES): %:%.o
-	$(CC) -o $@ $< $(SCU_DIR)/scu.c -Wl,$(SCU_DIR)/testcases.lds
+	$(CC) -o $@ $< $(SCU_DIR)/scu.c -Wl,$(SCU_DIR)/testcases.lds $(CFLAGS)
 
 %.o: %.c
 	$(CC) -c -o $@ $< $(CFLAGS)
