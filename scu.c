@@ -8,6 +8,9 @@
 #include "scu.h"
 #include "json.h"
 
+#define SCU_OUTPUT_FILENAME_TEMPLATE "/tmp/scu.XXXXXX"
+#define SCU_OUTPUT_FILENAME_TEMPLATE_SIZE (strlen (SCU_OUTPUT_FILENAME_TEMPLATE) + 1)
+
 /* Optional hook functions */
 
 __attribute__ ((weak)) void
@@ -60,25 +63,65 @@ static void
 _scu_output_module_start (int fd, const char *modulename)
 {
 	json_object_start (fd);
-	json_object_key (fd, "name");
-	json_string (fd, modulename);
-	json_separator (fd);
 	json_object_key (fd, "event");
 	json_string (fd, "module_start");
+	json_separator (fd);
+	json_object_key (fd, "name");
+	json_string (fd, modulename);
 	json_object_end (fd);
 	_scu_flush_json (fd);
 }
 
-
 static void
-_scu_output_module_end (int fd, const char *modulename)
+_scu_output_module_end (int fd)
 {
 	json_object_start (fd);
-	json_object_key (fd, "name");
-	json_string (fd, modulename);
-	json_separator (fd);
 	json_object_key (fd, "event");
 	json_string (fd, "module_end");
+	json_object_end (fd);
+	_scu_flush_json (fd);
+}
+
+static void
+_scu_output_setup_start (int fd, const char *filename)
+{
+	json_object_start (fd);
+	json_object_key (fd, "event");
+	json_string (fd, "setup_start");
+	json_separator (fd);
+	json_object_key (fd, "output");
+	json_string (fd, filename);
+	json_object_end (fd);
+	_scu_flush_json (fd);
+}
+static void
+_scu_output_setup_end (int fd)
+{
+	json_object_start (fd);
+	json_object_key (fd, "event");
+	json_string (fd, "setup_end");
+	json_object_end (fd);
+	_scu_flush_json (fd);
+}
+
+static void
+_scu_output_teardown_start (int fd, const char *filename)
+{
+	json_object_start (fd);
+	json_object_key (fd, "event");
+	json_string (fd, "teardown_start");
+	json_separator (fd);
+	json_object_key (fd, "output");
+	json_string (fd, filename);
+	json_object_end (fd);
+	_scu_flush_json (fd);
+}
+static void
+_scu_output_teardown_end (int fd)
+{
+	json_object_start (fd);
+	json_object_key (fd, "event");
+	json_string (fd, "teardown_end");
 	json_object_end (fd);
 	_scu_flush_json (fd);
 }
@@ -160,17 +203,24 @@ _scu_output_test_end (int fd, bool success, size_t asserts,
 }
 
 static void
-_scu_run_test (int fd, _scu_testcase *test)
+_scu_redirect_output (char *filename, size_t len)
 {
-	char temp_filename[] = "/tmp/scu.XXXXXX";
-	int out = mkstemp (temp_filename);
-	assert (out > 0);
+	strncpy (filename, SCU_OUTPUT_FILENAME_TEMPLATE, len);
+	int out = mkstemp (filename);
+	assert (out >= 0);
 	dup2 (out, STDOUT_FILENO);
 	dup2 (out, STDERR_FILENO);
 	setvbuf (stdout, NULL, _IONBF, 0);
 	setvbuf (stderr, NULL, _IONBF, 0);
+}
 
-	_scu_output_test_start (fd, temp_filename, test->desc);
+static void
+_scu_run_test (int fd, _scu_testcase *test)
+{
+	char filename[SCU_OUTPUT_FILENAME_TEMPLATE_SIZE];
+	_scu_redirect_output (filename, sizeof (filename));
+
+	_scu_output_test_start (fd, filename, test->desc);
 
 	struct timespec start_mono_time, end_mono_time, start_cpu_time, end_cpu_time;
 
@@ -223,15 +273,29 @@ main (void)
 
 	_scu_output_module_start (cmd, _scu_module_name);
 
+	char filename[SCU_OUTPUT_FILENAME_TEMPLATE_SIZE];
+
+	_scu_redirect_output (filename, sizeof (filename));
+
+	_scu_output_setup_start (cmd, filename);
+
 	_scu_setup ();
+
+	_scu_output_setup_end (cmd);
 
 	for (size_t i = 0; i < num_tests; i++) {
 		_scu_run_test (cmd, tests[i]);
 	}
 
+	_scu_redirect_output (filename, sizeof (filename));
+
+	_scu_output_teardown_start (cmd, filename);
+
 	_scu_teardown ();
 
-	_scu_output_module_end (cmd, _scu_module_name);
+	_scu_output_teardown_end (cmd);
+
+	_scu_output_module_end (cmd);
 
 	return 0;
 }
