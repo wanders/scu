@@ -5,6 +5,9 @@ CFLAGS+=-I$(SCU_DIR)
 test: build
 	$(SCU_DIR)/testrunner $(TESTCASES)
 
+test-gdb: build
+	$(SCU_DIR)/testrunner --gdb $(TESTCASES)
+
 test-valgrind: build
 	$(SCU_DIR)/testrunner --valgrind $(TESTCASES)
 

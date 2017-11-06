@@ -20,6 +20,7 @@ class Colors:
 class TestModule:
 
     def __init__(self, test_path, idx, valgrind=False):
+        self.test_path = test_path
         self.idx = idx
         self.finished = False
         self.failed = False
@@ -66,6 +67,20 @@ class TestModule:
     def read(self, size):
         return self.proc.stdout.read(size)
 
+    def print_debug_help(self):
+        print("DEBUG MODE ENABLED")
+        print()
+        print("The test process will stop and wait for SIGCONT. Run the following command to")
+        print("attach with gdb:")
+        print()
+        print("\tgdb {} {}".format(self.test_path, self.proc.pid))
+        print()
+        print("After attaching to the process with gdb, you can set breakpoints before")
+        print("resuming the process by sending SIGCONT:")
+        print()
+        print("\t(gdb) signal SIGCONT")
+        print()
+
 
 class Runner:
 
@@ -77,8 +92,13 @@ class Runner:
     def register(self, observer):
         self.observers.append(observer)
 
-    def run_modules(self, valgrind=False):
+    def run_modules(self, debug=False, valgrind=False):
+        if debug:
+            os.putenv('SCU_WAIT_FOR_DEBUGGER', '1')
         modules = [TestModule(t, i, valgrind) for i, t in enumerate(self.module_names)]
+        if debug:
+            for m in modules:
+                m.print_debug_help()
         running_modules = modules[:]
         while running_modules:
             # Attempt to read from all running modules
@@ -248,6 +268,7 @@ class TestCleaner(Observer):
 if __name__ == '__main__':
     parser = ArgumentParser(description="Runs SCU test modules")
     parser.add_argument('module', nargs='+', help="path to test module")
+    parser.add_argument('-g', '--gdb', action='store_true', help="gdb compatibility mode")
     parser.add_argument('-v', '--valgrind', action='store_true', help="valgrind compatibility mode")
 
     args = parser.parse_args()
@@ -257,5 +278,5 @@ if __name__ == '__main__':
     runner.register(TestEmitter())
     runner.register(emitter)
     runner.register(TestCleaner())
-    runner.run_modules(valgrind=args.valgrind)
+    runner.run_modules(debug=args.gdb, valgrind=args.valgrind)
     emitter.print_summary()

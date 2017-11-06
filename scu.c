@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <signal.h>
 #include <stdlib.h>
 #include <sys/ioctl.h>
 #include <time.h>
@@ -194,10 +195,18 @@ _scu_run_test (int fd, _scu_testcase *test)
 	                      num_failures, failures);
 }
 
+static void _scu_sigcont_handler (int sig) {}
+
 int
 main (void)
 {
 	int cmd = dup (STDOUT_FILENO);
+
+	if (getenv ("SCU_WAIT_FOR_DEBUGGER")) {
+		/* We use an empty signal handler to wait for SIGCONT with pause() */
+		signal (SIGCONT, _scu_sigcont_handler);
+		pause ();
+	}
 
 	_scu_output_module_start (cmd, _scu_module_name);
 
