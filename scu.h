@@ -97,19 +97,55 @@ extern _scu_testcase *_scu_testcases_end;
 		} \
 	} while (0)
 
-#define SCU_ASSERT(test) \
+#define SCU_ASSERT_WITH_MESSAGE(test, message, ...) \
 	do { \
 		(*_scu_asserts)++; \
 		if (!(test)) { \
-			SCU_FAIL ("assertion failure: " STRINGIFY (test)); \
+			char _scu_fmsg[_SCU_FAILURE_MESSAGE_LENGTH]; \
+			snprintf (_scu_fmsg, sizeof (_scu_fmsg), (message), ##__VA_ARGS__); \
+			SCU_FAIL (_scu_fmsg); \
 		} \
 	} while (0)
 
-#define SCU_ASSERT_NSTRING_EQUAL(a, b, size) \
-	SCU_ASSERT (strncmp ((const char *)a, (const char *)b, size) == 0)
+#define SCU_ASSERT(test) \
+	do { \
+		SCU_ASSERT_WITH_MESSAGE ((test), "assertion failure: %s", STRINGIFY (test)); \
+	} while (0)
+
+/* Convenience assertion macros */
+
+#define SCU_ASSERT_TRUE(val) \
+	SCU_ASSERT (val)
+
+#define SCU_ASSERT_FALSE(val) \
+	SCU_ASSERT (!(val))
+
+#define SCU_ASSERT_EQUAL(a, b) \
+	SCU_ASSERT ((a) == (b))
+
+#define SCU_ASSERT_NOT_EQUAL(a, b) \
+	SCU_ASSERT ((a) != (b))
 
 #define SCU_ASSERT_MEM_EQUAL(a, b, size) \
-	SCU_ASSERT (memcmp (a, b, size) == 0)
+	SCU_ASSERT (memcmp ((a), (b), (size)) == 0)
+
+#define SCU_ASSERT_PTR_NULL(ptr) \
+	SCU_ASSERT ((void*)(ptr) == NULL)
+
+#define SCU_ASSERT_PTR_NOT_NULL(ptr) \
+	SCU_ASSERT ((ptr) != NULL)
+
+#define SCU_ASSERT_PTR_EQUAL(a, b) \
+	SCU_ASSERT ((void*)(a) == (void*)(b))
+
+#define SCU_ASSERT_PTR_NOT_EQUAL(a, b) \
+	SCU_ASSERT ((void*)(a) != (void*)(b))
+
+#define SCU_ASSERT_STRING_EQUAL(a, b) \
+	SCU_ASSERT (strcmp ((const char *)(a), (const char *)(b)) == 0)
+
+#define SCU_ASSERT_NSTRING_EQUAL(a, b, size) \
+	SCU_ASSERT (strncmp ((const char *)(a), (const char *)(b), (size)) == 0)
 
 #ifdef __cplusplus
 }
