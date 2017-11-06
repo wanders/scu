@@ -1,6 +1,10 @@
 #ifndef _SCU_H_
 #define _SCU_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
@@ -106,5 +110,9 @@ extern _scu_testcase *_scu_testcases_end;
 
 #define SCU_ASSERT_MEM_EQUAL(a, b, size) \
 	SCU_ASSERT (memcmp (a, b, size) == 0)
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
