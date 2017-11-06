@@ -5,10 +5,13 @@ CFLAGS+=-I$(SCU_DIR)
 test: build
 	$(SCU_DIR)/testrunner $(TESTCASES)
 
+test-valgrind: build
+	$(SCU_DIR)/testrunner --valgrind $(TESTCASES)
+
 build: $(TESTCASES)
 
 clean::
-	rm -f $(TESTCASES) $(patsubst %,%.o,$(TESTCASES))
+	rm -f $(TESTCASES) $(patsubst %,%.o,$(TESTCASES)) $(patsubst %,valgrind.%.log,$(TESTCASES))
 
 $(TESTCASES): %:%.o
 	$(CC) -o $@ $< $(SCU_DIR)/scu.c -Wl,$(SCU_DIR)/testcases.lds $(CFLAGS)

@@ -4,8 +4,8 @@ from __future__ import print_function
 
 import json
 import os
-import sys
 
+from argparse import ArgumentParser
 from select import select
 from subprocess import Popen, PIPE
 
@@ -19,12 +19,24 @@ class Colors:
 
 class TestSuite:
 
-    def __init__(self, test_path, idx):
+    def __init__(self, test_path, idx, valgrind=False):
         self.idx = idx
         self.finished = False
         self.failed = False
         self.events = []
-        self.proc = Popen([os.path.abspath(test_path)], stdout=PIPE)
+
+        args = []
+        if valgrind:
+            log_path = "valgrind.{}.log".format(os.path.basename(test_path))
+            print("VALGRIND MODE ENABLED")
+            print()
+            print("The test process will be run under Valgrind. Any errors found will be logged to:")
+            print()
+            print("\t{}".format(log_path))
+            print()
+            args.extend(['valgrind', '--quiet', "--log-file={}".format(log_path)])
+        args.append(os.path.abspath(test_path))
+        self.proc = Popen(args, stdout=PIPE)
 
     def read_events(self):
         # Check the status of the process
@@ -65,8 +77,8 @@ class Runner:
     def register(self, observer):
         self.observers.append(observer)
 
-    def run_suites(self):
-        suites = [TestSuite(t, i) for i, t in enumerate(self.suite_names)]
+    def run_suites(self, valgrind=False):
+        suites = [TestSuite(t, i, valgrind) for i, t in enumerate(self.suite_names)]
         running_suites = suites[:]
         while running_suites:
             # Attempt to read from all running suites
@@ -234,10 +246,16 @@ class TestCleaner(Observer):
 
 
 if __name__ == '__main__':
-    runner = Runner(sys.argv[1:])
+    parser = ArgumentParser(description="Runs SCU test suites")
+    parser.add_argument('suite', nargs='+', help="path to test suite")
+    parser.add_argument('-v', '--valgrind', action='store_true', help="valgrind compatibility mode")
+
+    args = parser.parse_args()
+
+    runner = Runner(args.suite)
     emitter = SummaryEmitter()
     runner.register(TestEmitter())
     runner.register(emitter)
     runner.register(TestCleaner())
-    runner.run_suites()
+    runner.run_suites(valgrind=args.valgrind)
     emitter.print_summary()
