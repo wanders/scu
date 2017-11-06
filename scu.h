@@ -54,28 +54,30 @@ static _scu_failure *_scu_failures __attribute__ ((used));
 
 typedef struct {
 	void (*func) (bool *, size_t *, size_t *, _scu_failure *);
+	int line;
 	const char *desc;
 } _scu_testcase;
 
 #define SCU_TEST(name, desc) \
-static void _scu_test_func_##name (void); \
-static void _scu_test_func_##name##_wrapper (bool *success, size_t *asserts, size_t *num_failures, \
-                                             _scu_failure *failures) \
+static void name (void); \
+static void _scu_test_wrapper_##name (bool *success, size_t *asserts, size_t *num_failures, \
+                                      _scu_failure *failures) \
 { \
 	_scu_success = success; \
 	_scu_asserts = asserts; \
 	_scu_num_failures = num_failures; \
 	_scu_failures = failures; \
-	_scu_test_func_##name (); \
+	name (); \
 } \
-static _scu_testcase _scu_testcase_##name __attribute__ ((used)) \
-    __attribute__ ((section (".scu.testcases"))) = {_scu_test_func_##name##_wrapper, desc}; \
-static void _scu_test_func_##name (void)
+static _scu_testcase _scu_testcase_##name = {_scu_test_wrapper_##name, __LINE__, (desc)}; \
+static _scu_testcase *_scu_testcase_ptr_##name __attribute__ ((used)) \
+	__attribute__ ((section (".scu.testcases"))) = &_scu_testcase_##name; \
+static void name (void)
 
 /* Test case addresses */
 
-extern _scu_testcase _scu_testcases_start;
-extern _scu_testcase _scu_testcases_end;
+extern _scu_testcase *_scu_testcases_start;
+extern _scu_testcase *_scu_testcases_end;
 
 /* Assertion functions */
 

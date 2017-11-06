@@ -195,12 +195,25 @@ _scu_run_test (int fd, _scu_testcase *test)
 	                      num_failures, failures);
 }
 
+static int
+_scu_line_comparator (const void *a, const void *b)
+{
+	const _scu_testcase * const *ta = a;
+	const _scu_testcase * const *tb = b;
+	return (*ta)->line - (*tb)->line;
+}
+
 static void _scu_sigcont_handler (int sig) {}
 
 int
 main (void)
 {
 	int cmd = dup (STDOUT_FILENO);
+
+	_scu_testcase **tests = &_scu_testcases_start;
+	size_t num_tests = ((void*)&_scu_testcases_end - (void*)&_scu_testcases_start) / sizeof (_scu_testcase*);
+
+	qsort (tests, num_tests, sizeof (_scu_testcase*), _scu_line_comparator);
 
 	if (getenv ("SCU_WAIT_FOR_DEBUGGER")) {
 		/* We use an empty signal handler to wait for SIGCONT with pause() */
@@ -212,8 +225,8 @@ main (void)
 
 	_scu_setup ();
 
-	for (_scu_testcase *test = &_scu_testcases_start; test < &_scu_testcases_end; test++) {
-		_scu_run_test (cmd, test);
+	for (size_t i = 0; i < num_tests; i++) {
+		_scu_run_test (cmd, tests[i]);
 	}
 
 	_scu_teardown ();
