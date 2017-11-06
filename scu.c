@@ -29,9 +29,9 @@ _scu_after_each (void)
 {
 }
 
-/* Test suite name */
+/* Test module name */
 
-extern const char *_scu_suite_name;
+extern const char *_scu_module_name;
 
 /* Test protocol functions */
 
@@ -56,28 +56,28 @@ _scu_flush_json (int fd)
 }
 
 static void
-_scu_output_suite_start (int fd, const char *suitename)
+_scu_output_module_start (int fd, const char *modulename)
 {
 	json_object_start (fd);
 	json_object_key (fd, "name");
-	json_string (fd, suitename);
+	json_string (fd, modulename);
 	json_separator (fd);
 	json_object_key (fd, "event");
-	json_string (fd, "suite_start");
+	json_string (fd, "module_start");
 	json_object_end (fd);
 	_scu_flush_json (fd);
 }
 
 
 static void
-_scu_output_suite_end (int fd, const char *suitename)
+_scu_output_module_end (int fd, const char *modulename)
 {
 	json_object_start (fd);
 	json_object_key (fd, "name");
-	json_string (fd, suitename);
+	json_string (fd, modulename);
 	json_separator (fd);
 	json_object_key (fd, "event");
-	json_string (fd, "suite_end");
+	json_string (fd, "module_end");
 	json_object_end (fd);
 	_scu_flush_json (fd);
 }
@@ -199,7 +199,7 @@ main (void)
 {
 	int cmd = dup (STDOUT_FILENO);
 
-	_scu_output_suite_start (cmd, _scu_suite_name);
+	_scu_output_module_start (cmd, _scu_module_name);
 
 	_scu_setup ();
 
@@ -209,7 +209,7 @@ main (void)
 
 	_scu_teardown ();
 
-	_scu_output_suite_end (cmd, _scu_suite_name);
+	_scu_output_module_end (cmd, _scu_module_name);
 
 	return 0;
 }

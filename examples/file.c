@@ -11,9 +11,9 @@
 /* Pointer to the file used by the tests. */
 static FILE* temp_file = NULL;
 
-SCU_SUITE ("File");
+SCU_MODULE ("File");
 
-/* The suite initialization function.
+/* The module initialization function.
  * Opens the temporary file used by the tests.
  */
 SCU_SETUP ()
@@ -21,7 +21,7 @@ SCU_SETUP ()
   temp_file = fopen ("temp.txt", "w+");
 }
 
-/* The suite cleanup function.
+/* The module cleanup function.
  * Closes the temporary file used by the tests.
  */
 SCU_TEARDOWN ()

@@ -5,7 +5,7 @@ SCU is a simple C unit testing framework that integrates with _STR_, the simple 
 ## Design
 
 SCU consists of two parts: a test runner and tests. Individual test cases are arranged into test
-suites. The runner and the test suites communicate the test results via a JSON-based protocol.
+modules. The runner and the test modules communicate the test results via a JSON-based protocol.
 
 One of the primary concern of SCU is to make sure that accidental buffer overflow errors does
 not break operation of the test runner. It achieves this by trying to isolate the memory as much as
@@ -17,7 +17,7 @@ test runner will still be able to parse the corrupt test data.
 
 ## Writing tests
 
-TODO: document how to create unit test suites
+TODO: document how to create unit test modules
 
 ## Compiling tests
 

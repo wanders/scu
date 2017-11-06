@@ -15,15 +15,15 @@
 #define STRINGIFY_NOEXPAND(x) #x
 #define STRINGIFY(x) STRINGIFY_NOEXPAND(x)
 
-/* Test suite functions */
+/* Test module functions */
 
 void _scu_setup (void);
 void _scu_teardown (void);
 void _scu_before_each (void);
 void _scu_after_each (void);
 
-#define SCU_SUITE(name) \
-	const char *_scu_suite_name = name
+#define SCU_MODULE(name) \
+	const char *_scu_module_name = name
 
 #define SCU_SETUP() \
 	void _scu_setup (void)
@@ -37,7 +37,7 @@ void _scu_after_each (void);
 #define SCU_AFTER_EACH() \
 	void _scu_after_each (void)
 
-/* Test suite summary variable pointers */
+/* Test module summary variable pointers */
 
 typedef struct {
 	const char *file;

@@ -3,7 +3,7 @@
 
 #include "scu.h"
 
-SCU_SUITE ("Crash");
+SCU_MODULE ("Crash");
 
 SCU_TEST (before_crash, "This test will get executed")
 {

@@ -5,7 +5,7 @@
 
 #include "scu.h"
 
-SCU_SUITE ("Framework");
+SCU_MODULE ("Framework");
 
 static size_t _before_counter = 0;
 static size_t _after_counter = 0;
