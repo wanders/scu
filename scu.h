@@ -11,9 +11,10 @@ extern "C" {
 
 /* Configuration parameters */
 
+#define _SCU_MAX_TESTS 4096
 #define _SCU_MAX_TAGS 128
 #define _SCU_MAX_FAILURES 1024
-#define _SCU_FAILURE_MESSAGE_LENGTH 1024
+#define _SCU_FAILURE_MESSAGE_LENGTH 2048
 
 /* Helper macros */
 
