@@ -127,17 +127,31 @@ _scu_output_teardown_end (int fd)
 }
 
 static void
-_scu_output_test_start (int fd, const char *filename, const char *description)
+_scu_output_test_start (int fd, const char *name, const char *description, const char *tags[], const char *filename)
 {
 	json_object_start (fd);
 	json_object_key (fd, "event");
 	json_string (fd, "testcase_start");
 	json_separator (fd);
-	json_object_key (fd, "output");
-	json_string (fd, filename);
+	json_object_key (fd, "name");
+	json_string (fd, name);
 	json_separator (fd);
 	json_object_key (fd, "description");
 	json_string (fd, description);
+	json_separator (fd);
+	json_object_key (fd, "tags");
+	json_array_start (fd);
+	if (*tags) {
+		json_string (fd, tags[0]);
+		for (size_t i = 1; tags[i] && i < _SCU_MAX_TAGS; i++) {
+			json_separator (fd);
+			json_string (fd, tags[i]);
+		}
+	}
+	json_array_end (fd);
+	json_separator (fd);
+	json_object_key (fd, "output");
+	json_string (fd, filename);
 	json_object_end (fd);
 	_scu_flush_json (fd);
 }
@@ -163,7 +177,6 @@ _scu_output_test_failures (int fd, size_t num, _scu_failure *failures)
 	json_separator (fd);
 	json_object_key (fd, "failures");
 	json_array_start (fd);
-
 	if (num > 0) {
 		_scu_output_test_failure (fd, &failures[0]);
 		for (size_t i = 1; i < num; i++) {
@@ -171,7 +184,6 @@ _scu_output_test_failures (int fd, size_t num, _scu_failure *failures)
 			_scu_output_test_failure (fd, &failures[i]);
 		}
 	}
-
 	json_array_end (fd);
 }
 
@@ -195,9 +207,7 @@ _scu_output_test_end (int fd, bool success, size_t asserts,
 	json_separator (fd);
 	json_object_key (fd, "cpu_time");
 	json_real (fd, cpu_time);
-
 	_scu_output_test_failures (fd, num_failures, failures);
-
 	json_object_end (fd);
 	_scu_flush_json (fd);
 }
@@ -220,7 +230,7 @@ _scu_run_test (int fd, _scu_testcase *test)
 	char filename[SCU_OUTPUT_FILENAME_TEMPLATE_SIZE];
 	_scu_redirect_output (filename, sizeof (filename));
 
-	_scu_output_test_start (fd, filename, test->desc);
+	_scu_output_test_start (fd, test->name, test->desc, test->tags, filename);
 
 	struct timespec start_mono_time, end_mono_time, start_cpu_time, end_cpu_time;
 

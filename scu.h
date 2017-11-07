@@ -11,6 +11,7 @@ extern "C" {
 
 /* Configuration parameters */
 
+#define _SCU_MAX_TAGS 128
 #define _SCU_MAX_FAILURES 1024
 #define _SCU_FAILURE_MESSAGE_LENGTH 1024
 
@@ -59,10 +60,15 @@ static _scu_failure *_scu_failures __attribute__ ((used));
 typedef struct {
 	void (*func) (bool *, size_t *, size_t *, _scu_failure *);
 	int line;
+	const char *name;
 	const char *desc;
+	const char *tags[_SCU_MAX_TAGS];
 } _scu_testcase;
 
-#define SCU_TEST(name, desc) \
+#define SCU_TAGS(...) \
+	.tags = { __VA_ARGS__ }
+
+#define SCU_TEST(name, desc, ...) \
 static void name (void); \
 static void _scu_test_wrapper_##name (bool *success, size_t *asserts, size_t *num_failures, \
                                       _scu_failure *failures) \
@@ -73,7 +79,7 @@ static void _scu_test_wrapper_##name (bool *success, size_t *asserts, size_t *nu
 	_scu_failures = failures; \
 	name (); \
 } \
-static _scu_testcase _scu_testcase_##name = {_scu_test_wrapper_##name, __LINE__, (desc)}; \
+static _scu_testcase _scu_testcase_##name = {_scu_test_wrapper_##name, __LINE__, #name, (desc), ##__VA_ARGS__}; \
 static _scu_testcase *_scu_testcase_ptr_##name __attribute__ ((used)) \
 	__attribute__ ((section (".scu.testcases"))) = &_scu_testcase_##name; \
 static void name (void)

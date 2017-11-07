@@ -125,3 +125,8 @@ SCU_TEST (before_after, "Test that makes sure before and after functions have ru
 	SCU_ASSERT (_before_counter == 15);
 	SCU_ASSERT (_after_counter == 14);
 }
+
+SCU_TEST (tags, "Test with tags", SCU_TAGS ("tag1", "tag2"))
+{
+	SCU_ASSERT (true);
+}
