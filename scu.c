@@ -158,11 +158,14 @@ _scu_output_teardown_end (int fd)
 }
 
 static void
-_scu_output_test_start (int fd, const char *name, const char *filename)
+_scu_output_test_start (int fd, int idx, const char *name, const char *filename)
 {
 	json_object_start (fd);
 	json_object_key (fd, "event");
 	json_string (fd, "testcase_start");
+	json_separator (fd);
+	json_object_key (fd, "index");
+	json_integer (fd, idx);
 	json_separator (fd);
 	json_object_key (fd, "name");
 	json_string (fd, name);
@@ -205,13 +208,16 @@ _scu_output_test_failures (int fd, size_t num, _scu_failure *failures)
 }
 
 static void
-_scu_output_test_end (int fd, bool success, size_t asserts,
+_scu_output_test_end (int fd, int idx, bool success, size_t asserts,
                       double mono_time, double cpu_time,
                       size_t num_failures, _scu_failure *failures)
 {
 	json_object_start (fd);
 	json_object_key (fd, "event");
 	json_string (fd, "testcase_end");
+	json_separator (fd);
+	json_object_key (fd, "index");
+	json_integer (fd, idx);
 	json_separator (fd);
 	json_object_key (fd, "success");
 	json_boolean (fd, success);
@@ -271,12 +277,14 @@ _scu_get_time_diff (struct timespec startt, struct timespec endt)
 }
 
 static void
-_scu_run_test (int fd, _scu_testcase *test)
+_scu_run_test (int fd, int idx)
 {
+	_scu_testcase *test = _scu_module_tests[idx];
+
 	char filename[SCU_OUTPUT_FILENAME_TEMPLATE_SIZE];
 	_scu_redirect_output (filename, sizeof (filename));
 
-	_scu_output_test_start (fd, test->name, filename);
+	_scu_output_test_start (fd, idx, test->name, filename);
 
 	struct timespec start_mono_time, end_mono_time, start_cpu_time, end_cpu_time;
 
@@ -295,7 +303,7 @@ _scu_run_test (int fd, _scu_testcase *test)
 
 	_scu_after_each ();
 
-	_scu_output_test_end (fd, success, asserts,
+	_scu_output_test_end (fd, idx, success, asserts,
 	                      _scu_get_time_diff (start_mono_time, end_mono_time),
 	                      _scu_get_time_diff (start_cpu_time, end_cpu_time),
 	                      num_failures, failures);
@@ -327,8 +335,7 @@ run_tests (size_t num_tests, long int test_indices[])
 	_scu_output_setup_end (cmd);
 
 	for (size_t i = 0; i < num_tests; i++) {
-		size_t idx = test_indices[i];
-		_scu_run_test (cmd, _scu_module_tests[idx]);
+		_scu_run_test (cmd, test_indices[i]);
 	}
 
 	_scu_redirect_output (filename, sizeof (filename));

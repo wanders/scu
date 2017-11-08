@@ -5,7 +5,8 @@ from __future__ import print_function
 import json
 import os
 
-from argparse import ArgumentParser
+from argparse import ArgumentParser, Action
+from fnmatch import fnmatch
 from select import select
 from subprocess import Popen, PIPE
 
@@ -19,16 +20,22 @@ class Colors:
 
 class TestModule:
 
-    def __init__(self, test_path, idx, valgrind=False):
-        self.test_path = test_path
+    def __init__(self, module_path, idx):
+        self.module_path = module_path
         self.idx = idx
         self.finished = False
         self.failed = False
         self.events = []
+        self.tests = []
 
+    def list(self):
+        args = [os.path.abspath(self.module_path), '--list']
+        self.proc = Popen(args, stdout=PIPE)
+
+    def run(self, test_indices, valgrind):
         args = []
         if valgrind:
-            log_path = "valgrind.{}.log".format(os.path.basename(test_path))
+            log_path = "valgrind.{}.log".format(os.path.basename(self.module_path))
             print("VALGRIND MODE ENABLED")
             print()
             print("The test process will be run under Valgrind. Any errors found will be logged to:")
@@ -36,7 +43,7 @@ class TestModule:
             print("\t{}".format(log_path))
             print()
             args.extend(['valgrind', '--quiet', "--log-file={}".format(log_path)])
-        args.append(os.path.abspath(test_path))
+        args.extend([os.path.abspath(self.module_path), '--run', *map(str, test_indices)])
         self.proc = Popen(args, stdout=PIPE)
 
     def read_events(self):
@@ -61,6 +68,10 @@ class TestModule:
             if self.proc.returncode != 0:
                 self.failed = True
 
+    def reset_status(self):
+        self.finished = False
+        self.failed = False
+
     def fileno(self):
         return self.proc.stdout.fileno()
 
@@ -73,7 +84,7 @@ class TestModule:
         print("The test process will stop and wait for SIGCONT. Run the following command to")
         print("attach with gdb:")
         print()
-        print("\tgdb {} {}".format(self.test_path, self.proc.pid))
+        print("\tgdb {} {}".format(self.module_path, self.proc.pid))
         print()
         print("After attaching to the process with gdb, you can set breakpoints before")
         print("resuming the process by sending SIGCONT:")
@@ -84,21 +95,36 @@ class TestModule:
 
 class Runner:
 
-    def __init__(self, module_names):
-        self.module_names = module_names
+    def __init__(self, module_paths):
         self.observers = []
-        self.cur_idx = 0
+        self.modules = [TestModule(t, i) for i, t in enumerate(module_paths)]
 
     def register(self, observer):
         self.observers.append(observer)
 
-    def run_modules(self, debug=False, valgrind=False):
+    def deregister(self, observer):
+        self.observers.remove(observer)
+
+    def list_modules(self):
+        for m in self.modules:
+            m.list()
+        self.handle_events(self.modules)
+
+    def run_modules(self, tests_to_run, debug=False, valgrind=False):
         if debug:
             os.putenv('SCU_WAIT_FOR_DEBUGGER', '1')
-        modules = [TestModule(t, i, valgrind) for i, t in enumerate(self.module_names)]
+        for m, indices in tests_to_run:
+            m.run(indices, valgrind)
         if debug:
-            for m in modules:
+            for m in tests_to_run:
                 m.print_debug_help()
+        self.handle_events([m for m, _ in tests_to_run])
+
+    def handle_events(self, modules):
+        self.cur_idx = 0
+        for m in modules:
+            m.reset_status()
+
         running_modules = modules[:]
         while running_modules:
             # Attempt to read from all running modules
@@ -146,16 +172,48 @@ class Observer:
             handler(event)
 
 
+class TestInfo:
+
+    def __init__(self, name=None, description=None, tags=[], **kwargs):
+        self.name = name
+        self.description = description
+        self.tags = tags
+        self.output_file_path = None
+
+    def __repr__(self):
+        return self.name
+
+
+class TestInfoCollector(Observer):
+
+    def __init__(self, modules):
+        self.modules = modules
+        self.current_idx = -1
+
+    def handle_module_list(self, event):
+        self.current_idx += 1
+
+    def handle_testcase_list(self, event):
+        module = self.modules[self.current_idx]
+        module.tests.append(TestInfo(**event))
+
+
 class TestEmitter(Observer):
 
-    def __init__(self):
-        self.start_event = None
+    def __init__(self, modules):
+        self.modules = modules
+        self.current_module_idx = -1
+        self.current_module = None
+        self.current_test = None
 
     def handle_module_start(self, event):
+        self.current_module_idx += 1
+        self.current_module = self.modules[self.current_module_idx]
         print("  {[name]}".format(event))
 
     def handle_testcase_start(self, event):
-        self.start_event = event
+        self.current_test = self.current_module.tests[event['index']]
+        self.current_test.output_file_path = event['output']
 
     def handle_testcase_end(self, event):
         self.print_testcase(event)
@@ -167,7 +225,7 @@ class TestEmitter(Observer):
         event_type = event['event']
         success = event['success'] if event_type == 'testcase_end' else False
         result = (Colors.GREEN + "PASS") if success else (Colors.RED + "FAIL")
-        print("    [ {result}{colors.DEFAULT} ] {colors.GRAY}{event[description]}{colors.DEFAULT}".format(event=self.start_event, result=result, colors=Colors), end='')
+        print("    [ {result}{colors.DEFAULT} ] {colors.GRAY}{desc}{colors.DEFAULT}".format(desc=self.current_test.description, result=result, colors=Colors), end='')
         if event_type == 'testcase_end':
             print(" ({event[duration]:.3f} ms)".format(event=event))
             if not success:
@@ -178,7 +236,7 @@ class TestEmitter(Observer):
             print('')
             print("           ! " + event['message'])
         if not success:
-            with open(self.start_event['output']) as f:
+            with open(self.current_test.output_file_path) as f:
                 for line in f:
                     print("           > " + line, end='')
 
@@ -265,18 +323,56 @@ class TestCleaner(Observer):
         os.unlink(self.start_event['output'])
 
 
+class FilterAction(Action):
+    def __call__(self, parser, namespace, values, option_string):
+        items = getattr(namespace, self.dest)
+        if items is None:
+            items = []
+        items.append((values, namespace.exclude))
+        setattr(namespace, self.dest, items)
+        namespace.exclude = False
+
+
 if __name__ == '__main__':
+    # Parse arguments
     parser = ArgumentParser(description="Runs SCU test modules")
     parser.add_argument('module', nargs='+', help="path to test module")
+    parser.add_argument('--name', action=FilterAction, default=[], help="filter test cases by name")
+    parser.add_argument('--tag', action=FilterAction, default=[], help="filter test cases by tag")
+    parser.add_argument('--exclude', action='store_true', help="negates the following filter option")
     parser.add_argument('-g', '--gdb', action='store_true', help="gdb compatibility mode")
     parser.add_argument('-v', '--valgrind', action='store_true', help="valgrind compatibility mode")
-
     args = parser.parse_args()
 
+    # Create runner
     runner = Runner(args.module)
+
+    # List all tests
+    collector = TestInfoCollector(runner.modules)
+    runner.register(collector)
+    runner.list_modules()
+    runner.deregister(collector)
+
+    tests_to_run = []
+    for m in runner.modules:
+        res = set(range(len(m.tests)))
+        for p, exclude in args.name:
+            s = set(i for i, t in enumerate(m.tests) if fnmatch(t.name, p))
+            if exclude:
+                s = set(range(len(m.tests))) - s
+            res = res & s
+        for p, exclude in args.tag:
+            s = set(i for i, t in enumerate(m.tests) if p in t.tags)
+            if exclude:
+                s = set(range(len(m.tests))) - s
+            res = res & s
+        if res:
+            tests_to_run.append((m, res))
+
+    # Run selected tests
     emitter = SummaryEmitter()
-    runner.register(TestEmitter())
+    runner.register(TestEmitter(runner.modules))
     runner.register(emitter)
     runner.register(TestCleaner())
-    runner.run_modules(debug=args.gdb, valgrind=args.valgrind)
+    runner.run_modules(tests_to_run, debug=args.gdb, valgrind=args.valgrind)
     emitter.print_summary()
