@@ -6,7 +6,9 @@ import json
 import os
 
 from argparse import ArgumentParser, Action
+from collections import defaultdict
 from fnmatch import fnmatch
+from multiprocessing import cpu_count
 from select import select
 from subprocess import Popen, PIPE
 
@@ -18,6 +20,18 @@ class Colors:
     DEFAULT = "\x1b[39m"
 
 
+class TestCase:
+
+    def __init__(self, name=None, description=None, tags=[], **kwargs):
+        self.name = name
+        self.description = description
+        self.tags = tags
+        self.output_file_path = None
+
+    def __repr__(self):
+        return self.name
+
+
 class TestModule:
 
     def __init__(self, module_path, idx):
@@ -25,8 +39,8 @@ class TestModule:
         self.idx = idx
         self.finished = False
         self.failed = False
-        self.events = []
         self.tests = []
+        self.read_buffer = b''
 
     def list(self):
         args = [os.path.abspath(self.module_path), '--list']
@@ -45,22 +59,27 @@ class TestModule:
             args.extend(['valgrind', '--quiet', "--log-file={}".format(log_path)])
         args.extend([os.path.abspath(self.module_path), '--run', *map(str, test_indices)])
         self.proc = Popen(args, stdout=PIPE)
+        os.set_blocking(self.fileno(), False)
 
     def read_events(self):
         # Check the status of the process
         self.proc.poll()
 
-        # Yield all pending events
-        for line in self.proc.stdout:
-            try:
-                event = json.loads(line.decode())
-            except ValueError:
-                event = {
-                    'event': 'testcase_error',
-                    'message': "Failed to parse test case output",
-                    'crash': False
-                }
-            yield event
+        self.read_buffer += self.proc.stdout.read()
+        if b'\n' in self.read_buffer:
+            lines = self.read_buffer.split(b'\n')
+            # Yield all pending events
+            for line in lines[:-1]:
+                try:
+                    event = json.loads(line.decode())
+                except ValueError:
+                    event = {
+                        'event': 'testcase_error',
+                        'message': "Failed to parse test case output",
+                        'crash': False
+                    }
+                yield event
+            self.read_buffer = lines[-1]
 
         # Handle process completion
         if self.proc.returncode is not None:
@@ -93,11 +112,18 @@ class TestModule:
         print()
 
 
-class Runner:
+class Observer:
 
-    def __init__(self, module_paths):
+    def call(self, module, event):
+        handler = getattr(self, 'handle_' + event['event'], None)
+        if handler:
+            handler(module, event)
+
+
+class EventEmitter:
+
+    def __init__(self):
         self.observers = []
-        self.modules = [TestModule(t, i) for i, t in enumerate(module_paths)]
 
     def register(self, observer):
         self.observers.append(observer)
@@ -105,129 +131,144 @@ class Runner:
     def deregister(self, observer):
         self.observers.remove(observer)
 
+    def emit(self, module, event):
+        for observer in self.observers:
+            observer.call(module, event)
+
+
+class BufferedEventEmitter(EventEmitter):
+
+        def __init__(self):
+            super(BufferedEventEmitter, self).__init__()
+            self.current_module = None
+            self.buffered_events = defaultdict(list)
+            self.finished_modules = []
+
+        def call(self, module, event):
+            if event['event'] == 'module_start':
+                self.handle_module_start(module)
+
+            if module == self.current_module:
+                self.emit(module, event)
+            else:
+                self.buffered_events[module].append(event)
+
+            if event['event'] == 'module_end':
+                self.handle_module_end(module)
+
+        def handle_module_start(self, module):
+            if not self.current_module:
+                self.current_module = module
+
+        def handle_module_end(self, module):
+            if module == self.current_module:
+                while self.finished_modules:
+                    next_module = self.finished_modules.pop()
+                    for e in self.buffered_events.pop(next_module):
+                        self.emit(next_module, e)
+                if self.buffered_events:
+                    next_module, events = self.buffered_events.popitem()
+                    self.current_module = next_module
+                    for e in events:
+                        self.emit(next_module, e)
+                else:
+                    self.current_module = None
+            else:
+                self.finished_modules.append(module)
+
+
+class Runner(EventEmitter):
+
+    def __init__(self, module_paths, jobs):
+        super(Runner, self).__init__()
+        self.modules = [TestModule(t, i) for i, t in enumerate(module_paths)]
+        self.simultaneous_jobs = jobs
+
     def list_modules(self):
-        for m in self.modules:
-            m.list()
-        self.handle_events(self.modules)
+        self.reset_modules()
+        pending_jobs = self.modules[:]
+        running_jobs = []
+        while pending_jobs or running_jobs:
+            while len(running_jobs) < self.simultaneous_jobs and pending_jobs:
+                job = pending_jobs.pop()
+                job.list()
+                running_jobs.append(job)
+            job = self.handle_events(running_jobs)
+            running_jobs.remove(job)
 
     def run_modules(self, tests_to_run, debug=False, valgrind=False):
+        self.reset_modules()
         if debug:
             os.putenv('SCU_WAIT_FOR_DEBUGGER', '1')
-        for m, indices in tests_to_run:
-            m.run(indices, valgrind)
-        if debug:
-            for m in tests_to_run:
-                m.print_debug_help()
-        self.handle_events([m for m, _ in tests_to_run])
+        pending_jobs = tests_to_run[:]
+        running_jobs = []
+        while pending_jobs or running_jobs:
+            while len(running_jobs) < self.simultaneous_jobs and pending_jobs:
+                job, indices = pending_jobs.pop()
+                job.run(indices, valgrind)
+                if debug:
+                    job.print_debug_help()
+                running_jobs.append(job)
+            job = self.handle_events(running_jobs)
+            running_jobs.remove(job)
 
-    def handle_events(self, modules):
-        self.cur_idx = 0
-        for m in modules:
+    def reset_modules(self):
+        for m in self.modules:
             m.reset_status()
 
-        running_modules = modules[:]
-        while running_modules:
+    def handle_events(self, modules):
+        while True:
             # Attempt to read from all running modules
-            rs, _, _ = select(running_modules, [], [])
+            rs, _, _ = select(modules, [], [])
             for r in rs:
                 # Handle all pending events
                 for event in r.read_events():
-                    self.handle_event(r, event)
+                    self.emit(r, event)
                 # Handle module completion
                 if r.finished:
-                    running_modules.remove(r)
                     if r.failed:
-                        self.handle_event(r, {
+                        self.emit(r, {
                             'event': 'testcase_error',
                             'message': "Test module crashed",
                             'crash': True
                         })
-                    # Handle all remaining completed modules
-                    while modules[self.cur_idx].finished:
-                        self.cur_idx += 1
-                        if self.cur_idx == len(modules):
-                            break
-                        list(map(self.emit, modules[self.cur_idx].events))
-
-    def handle_event(self, module, event):
-        if not event:
-            return
-        # Emit the event if it belongs to the current module
-        if module.idx == self.cur_idx:
-            self.emit(event)
-        # Buffer the event for later if it belongs to any other module
-        else:
-            module.events.append(event)
-
-    def emit(self, event):
-        for observer in self.observers:
-            observer.call(event)
+                        self.emit(r, {
+                            'event': 'module_end',
+                        })
+                    return r
 
 
-class Observer:
+class TestModuleCollector(Observer):
 
-    def call(self, event):
-        handler = getattr(self, 'handle_' + event['event'], None)
-        if handler:
-            handler(event)
-
-
-class TestInfo:
-
-    def __init__(self, name=None, description=None, tags=[], **kwargs):
-        self.name = name
-        self.description = description
-        self.tags = tags
-        self.output_file_path = None
-
-    def __repr__(self):
-        return self.name
-
-
-class TestInfoCollector(Observer):
-
-    def __init__(self, modules):
-        self.modules = modules
-        self.current_idx = -1
-
-    def handle_module_list(self, event):
-        self.current_idx += 1
-
-    def handle_testcase_list(self, event):
-        module = self.modules[self.current_idx]
-        module.tests.append(TestInfo(**event))
+    def handle_testcase_list(self, module, event):
+        module.tests.append(TestCase(**event))
 
 
 class TestEmitter(Observer):
 
-    def __init__(self, modules):
-        self.modules = modules
-        self.current_module_idx = -1
-        self.current_module = None
+    def __init__(self):
         self.current_test = None
 
-    def handle_module_start(self, event):
-        self.current_module_idx += 1
-        self.current_module = self.modules[self.current_module_idx]
+    def handle_module_start(self, module, event):
         print("  {[name]}".format(event))
 
-    def handle_testcase_start(self, event):
-        self.current_test = self.current_module.tests[event['index']]
+    def handle_testcase_start(self, module, event):
+        self.current_test = module.tests[event['index']]
         self.current_test.output_file_path = event['output']
 
-    def handle_testcase_end(self, event):
-        self.print_testcase(event)
+    def handle_testcase_end(self, module, event):
+        self.print_testcase(self.current_test, event)
 
-    def handle_testcase_error(self, event):
-        self.print_testcase(event)
+    def handle_testcase_error(self, module, event):
+        self.print_testcase(self.current_test, event)
 
-    def print_testcase(self, event):
+    def print_testcase(self, test, event):
         event_type = event['event']
         success = event['success'] if event_type == 'testcase_end' else False
         result = (Colors.GREEN + "PASS") if success else (Colors.RED + "FAIL")
-        print("    [ {result}{colors.DEFAULT} ] {colors.GRAY}{desc}{colors.DEFAULT}".format(desc=self.current_test.description, result=result, colors=Colors), end='')
+        print("    [ {result}{colors.DEFAULT} ] {colors.GRAY}{desc}{colors.DEFAULT}".format(desc=test.description, result=result, colors=Colors), end='')
         if event_type == 'testcase_end':
-            print(" ({event[duration]:.3f} ms)".format(event=event))
+            print(" ({event[duration]:.3f} s)".format(event=event))
             if not success:
                 for failure in event['failures']:
                     print("           * " + failure['message'])
@@ -236,7 +277,7 @@ class TestEmitter(Observer):
             print('')
             print("           ! " + event['message'])
         if not success:
-            with open(self.current_test.output_file_path) as f:
+            with open(test.output_file_path) as f:
                 for line in f:
                     print("           > " + line, end='')
 
@@ -252,11 +293,12 @@ class SummaryEmitter(Observer):
         self.assert_fail_counter = 0
         self.duration_total = 0
         self.cpu_time_total = 0
+        self.has_reported_failing_test = {}
 
-    def handle_module_start(self, event):
-        self.has_reported_failing_test = False
+    def handle_module_start(self, module, event):
+        self.has_reported_failing_test[module] = False
 
-    def handle_testcase_end(self, event):
+    def handle_testcase_end(self, module, event):
         self.assert_counter += event['asserts']
         self.assert_fail_counter += len(event['failures'])
         self.test_counter += 1
@@ -264,18 +306,17 @@ class SummaryEmitter(Observer):
         self.cpu_time_total += event['cpu_time']
         if event['failures']:
             self.test_fail_counter += 1
-            self.has_reported_failing_test = True
+            self.has_reported_failing_test[module] = True
 
-    def handle_testcase_error(self, event):
+    def handle_testcase_error(self, module, event):
         self.test_counter += 1
         self.test_fail_counter += 1
         if event['crash']:
-            self.module_counter += 1
             self.module_fail_counter += 1
 
-    def handle_module_end(self, event):
+    def handle_module_end(self, module, event):
         self.module_counter += 1
-        if self.has_reported_failing_test:
+        if self.has_reported_failing_test[module]:
             self.module_fail_counter += 1
 
     def print_summary(self):
@@ -308,19 +349,19 @@ class SummaryEmitter(Observer):
 class TestCleaner(Observer):
 
     def __init__(self):
-        self.start_event = None
+        self.output_file_path = None
 
-    def handle_testcase_start(self, event):
-        self.start_event = event
+    def handle_testcase_start(self, module, event):
+        self.output_file_path = event['output']
 
-    def handle_testcase_end(self, event):
+    def handle_testcase_end(self, module, event):
         self.clean_testcase()
 
-    def handle_testcase_error(self, event):
+    def handle_testcase_error(self, module, event):
         self.clean_testcase()
 
     def clean_testcase(self):
-        os.unlink(self.start_event['output'])
+        os.unlink(self.output_file_path)
 
 
 class FilterAction(Action):
@@ -342,37 +383,46 @@ if __name__ == '__main__':
     parser.add_argument('--exclude', action='store_true', help="negates the following filter option")
     parser.add_argument('-g', '--gdb', action='store_true', help="gdb compatibility mode")
     parser.add_argument('-v', '--valgrind', action='store_true', help="valgrind compatibility mode")
+    parser.add_argument('-j', '--jobs', default=cpu_count(), type=int, help="number of jobs to run simultaneously")
     args = parser.parse_args()
 
     # Create runner
-    runner = Runner(args.module)
+    runner = Runner(args.module, args.jobs)
 
     # List all tests
-    collector = TestInfoCollector(runner.modules)
+    collector = TestModuleCollector()
     runner.register(collector)
     runner.list_modules()
     runner.deregister(collector)
 
+    # Filter tests
     tests_to_run = []
     for m in runner.modules:
-        res = set(range(len(m.tests)))
+        indices = set(range(len(m.tests)))
         for p, exclude in args.name:
             s = set(i for i, t in enumerate(m.tests) if fnmatch(t.name, p))
             if exclude:
-                s = set(range(len(m.tests))) - s
-            res = res & s
+                s = indices - s
+            indices = indices & s
         for p, exclude in args.tag:
             s = set(i for i, t in enumerate(m.tests) if p in t.tags)
             if exclude:
-                s = set(range(len(m.tests))) - s
-            res = res & s
-        if res:
-            tests_to_run.append((m, res))
+                s = indices - s
+            indices = indices & s
+        if indices:
+            tests_to_run.append((m, indices))
+
+    # Set up observers
+    buffered_emitter = BufferedEventEmitter()
+    buffered_emitter.register(TestEmitter())
+    buffered_emitter.register(TestCleaner())
+
+    summary_emitter = SummaryEmitter()
+    runner.register(buffered_emitter)
+    runner.register(summary_emitter)
 
     # Run selected tests
-    emitter = SummaryEmitter()
-    runner.register(TestEmitter(runner.modules))
-    runner.register(emitter)
-    runner.register(TestCleaner())
     runner.run_modules(tests_to_run, debug=args.gdb, valgrind=args.valgrind)
-    emitter.print_summary()
+
+    # Print summary
+    summary_emitter.print_summary()
