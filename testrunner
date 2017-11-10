@@ -269,7 +269,10 @@ class TestEmitter(Observer):
         event_type = event['event']
         success = event['success'] if event_type == 'testcase_end' else False
         result = (Colors.GREEN + "PASS") if success else (Colors.RED + "FAIL")
-        print("    [ {result}{colors.DEFAULT} ] {colors.GRAY}{desc}{colors.DEFAULT}".format(desc=test.description, result=result, colors=Colors), end='')
+        print(
+            "    [ {result}{colors.DEFAULT} ] {colors.GRAY}{desc}{colors.DEFAULT}"
+            .format(desc=test.description, result=result, colors=Colors), end=''
+        )
         if event_type == 'testcase_end':
             print(" ({event[duration]:.3f} s)".format(event=event))
             if not success:
