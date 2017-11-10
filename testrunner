@@ -7,6 +7,7 @@ import os
 
 from argparse import ArgumentParser, Action
 from collections import defaultdict
+from fcntl import fcntl, F_GETFL, F_SETFL
 from fnmatch import fnmatch
 from multiprocessing import cpu_count
 from select import select
@@ -57,9 +58,11 @@ class TestModule:
             print("\t{}".format(log_path))
             print()
             args.extend(['valgrind', '--quiet', "--log-file={}".format(log_path)])
-        args.extend([os.path.abspath(self.module_path), '--run', *map(str, test_indices)])
+        args.extend([os.path.abspath(self.module_path), '--run'])
+        args.extend(map(str, test_indices))
         self.proc = Popen(args, stdout=PIPE)
-        os.set_blocking(self.fileno(), False)
+        flags = fcntl(self.fileno(), F_GETFL)
+        fcntl(self.fileno(), F_SETFL, flags | os.O_NONBLOCK)
 
     def read_events(self):
         # Check the status of the process
@@ -120,7 +123,7 @@ class Observer:
             handler(module, event)
 
 
-class EventEmitter:
+class EventEmitter(object):
 
     def __init__(self):
         self.observers = []
