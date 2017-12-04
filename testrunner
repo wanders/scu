@@ -15,10 +15,10 @@ from subprocess import Popen, PIPE
 
 
 class Colors:
-    GRAY = "\x1b[90m"
-    RED = "\x1b[91m"
-    GREEN = "\x1b[92m"
-    DEFAULT = "\x1b[39m"
+    GRAY = "\x1b[1;30m"
+    RED = "\x1b[1;31m"
+    GREEN = "\x1b[1;32m"
+    DEFAULT = "\x1b[0;39m"
 
 
 class TestCase:
@@ -270,11 +270,14 @@ class TestEmitter(Observer):
         success = event['success'] if event_type == 'testcase_end' else False
         result = (Colors.GREEN + "PASS") if success else (Colors.RED + "FAIL")
         print(
-            "    [ {result}{colors.DEFAULT} ] {colors.GRAY}{desc}{colors.DEFAULT}"
+            "    [ {result}{colors.DEFAULT} ] {desc}"
             .format(desc=test.description, result=result, colors=Colors), end=''
         )
         if event_type == 'testcase_end':
-            print(" ({event[duration]:.3f} s)".format(event=event))
+            print(
+                " {colors.GRAY}({event[duration]:.3f} s){colors.DEFAULT}"
+                .format(event=event, colors=Colors)
+            )
             if not success:
                 for failure in event['failures']:
                     print("           * " + failure['message'])
