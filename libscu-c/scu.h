@@ -92,6 +92,9 @@ extern _scu_testcase *_scu_testcases_end;
 
 /* Assertion functions */
 
+void _scu_handle_fatal_assert(void) __attribute__((noreturn));
+void _scu_fatal_assert_allowed(void);
+
 #define SCU_FAIL(message)                                                                                           \
 	do {                                                                                                        \
 		*_scu_success = false;                                                                              \
@@ -104,20 +107,30 @@ extern _scu_testcase *_scu_testcases_end;
 		}                                                                                                   \
 	} while (0)
 
-#define SCU_ASSERT_WITH_MESSAGE(test, message, ...)                                       \
+#define _SCU_ASSERT_WITH_MESSAGE(test, is_fatal, message, ...)                            \
 	do {                                                                              \
 		(*_scu_asserts)++;                                                        \
 		if (!(test)) {                                                            \
 			char _scu_fmsg[_SCU_FAILURE_MESSAGE_LENGTH];                      \
 			snprintf(_scu_fmsg, sizeof(_scu_fmsg), (message), ##__VA_ARGS__); \
 			SCU_FAIL(_scu_fmsg);                                              \
+			if (is_fatal)                                                     \
+				_scu_handle_fatal_assert();                               \
 		}                                                                         \
 	} while (0)
 
-#define SCU_ASSERT(test)                                                                   \
-	do {                                                                               \
-		SCU_ASSERT_WITH_MESSAGE((test), "assertion failure: %s", STRINGIFY(test)); \
+#define SCU_ASSERT_WITH_MESSAGE(test, message, ...) _SCU_ASSERT_WITH_MESSAGE(test, false, ##__VA_ARGS__)
+#define SCU_ASSERT_WITH_MESSAGE_FATAL(test, message, ...) _SCU_ASSERT_WITH_MESSAGE(test, true, ##__VA_ARGS__)
+
+#define _SCU_ASSERT(test, is_fatal)                                                                   \
+	do {                                                                                          \
+		if (is_fatal)                                                                         \
+			_scu_fatal_assert_allowed();                                                  \
+		_SCU_ASSERT_WITH_MESSAGE((test), is_fatal, "assertion failure: %s", STRINGIFY(test)); \
 	} while (0)
+
+#define SCU_ASSERT(test) _SCU_ASSERT(test, false)
+#define SCU_ASSERT_FATAL(test) _SCU_ASSERT(test, true)
 
 /* Convenience assertion macros */
 
@@ -153,6 +166,39 @@ extern _scu_testcase *_scu_testcases_end;
 
 #define SCU_ASSERT_NSTRING_EQUAL(a, b, size) \
 	SCU_ASSERT(strncmp((const char *)(a), (const char *)(b), (size)) == 0)
+
+#define SCU_ASSERT_TRUE_FATAL(val) \
+	SCU_ASSERT_FATAL(val)
+
+#define SCU_ASSERT_FALSE_FATAL(val) \
+	SCU_ASSERT_FATAL(!(val))
+
+#define SCU_ASSERT_EQUAL_FATAL(a, b) \
+	SCU_ASSERT_FATAL((a) == (b))
+
+#define SCU_ASSERT_NOT_EQUAL_FATAL(a, b) \
+	SCU_ASSERT_FATAL((a) != (b))
+
+#define SCU_ASSERT_MEM_EQUAL_FATAL(a, b, size) \
+	SCU_ASSERT_FATAL(memcmp((a), (b), (size)) == 0)
+
+#define SCU_ASSERT_PTR_NULL_FATAL(ptr) \
+	SCU_ASSERT_FATAL((void *)(ptr) == NULL)
+
+#define SCU_ASSERT_PTR_NOT_NULL_FATAL(ptr) \
+	SCU_ASSERT_FATAL((ptr) != NULL)
+
+#define SCU_ASSERT_PTR_EQUAL_FATAL(a, b) \
+	SCU_ASSERT_FATAL((void *)(a) == (void *)(b))
+
+#define SCU_ASSERT_PTR_NOT_EQUAL_FATAL(a, b) \
+	SCU_ASSERT_FATAL((void *)(a) != (void *)(b))
+
+#define SCU_ASSERT_STRING_EQUAL_FATAL(a, b) \
+	SCU_ASSERT_FATAL(strcmp((const char *)(a), (const char *)(b)) == 0)
+
+#define SCU_ASSERT_NSTRING_EQUAL_FATAL(a, b, size) \
+	SCU_ASSERT_FATAL(strncmp((const char *)(a), (const char *)(b), (size)) == 0)
 
 #ifdef __cplusplus
 }

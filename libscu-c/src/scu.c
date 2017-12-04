@@ -1,8 +1,10 @@
 #include <argp.h>
 #include <assert.h>
+#include <setjmp.h>
 #include <signal.h>
 #include <stdlib.h>
 #include <sys/ioctl.h>
+#include <sys/syscall.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -276,6 +278,30 @@ _scu_get_time_diff(struct timespec startt, struct timespec endt)
 	return dsec + dnsec / 1e9;
 }
 
+static pid_t _scu_fatal_assert_allowed_thread_id;
+static bool _scu_fatal_assert_jmpbuf_valid;
+static jmp_buf _scu_fatal_assert_jmpbuf;
+
+static pid_t
+_scu_get_current_thread_id(void)
+{
+	return syscall(SYS_gettid);
+}
+
+void
+_scu_fatal_assert_allowed(void)
+{
+	assert(_scu_fatal_assert_jmpbuf_valid);
+	/* FATAL errors can only be used from same thread */
+	assert(_scu_get_current_thread_id() == _scu_fatal_assert_allowed_thread_id);
+}
+
+void
+_scu_handle_fatal_assert(void)
+{
+	longjmp(_scu_fatal_assert_jmpbuf, 1);
+}
+
 static void
 _scu_run_test(int fd, int idx)
 {
@@ -296,7 +322,14 @@ _scu_run_test(int fd, int idx)
 	_scu_failure failures[_SCU_MAX_FAILURES];
 	bool success = true;
 	size_t asserts = 0, num_failures = 0;
-	test->func(&success, &asserts, &num_failures, failures);
+
+	_scu_fatal_assert_jmpbuf_valid = true;
+	_scu_fatal_assert_allowed_thread_id = _scu_get_current_thread_id();
+	if (!setjmp(_scu_fatal_assert_jmpbuf)) {
+		test->func(&success, &asserts, &num_failures, failures);
+	}
+	_scu_fatal_assert_allowed_thread_id = 0;
+	_scu_fatal_assert_jmpbuf_valid = false;
 
 	clock_gettime(CLOCK_MONOTONIC, &end_mono_time);
 	clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &end_cpu_time);
