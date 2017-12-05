@@ -302,6 +302,8 @@ _scu_handle_fatal_assert(void)
 	longjmp(_scu_fatal_assert_jmpbuf, 1);
 }
 
+static _scu_failure _failures[_SCU_MAX_FAILURES];
+
 static void
 _scu_run_test(int fd, int idx)
 {
@@ -319,14 +321,13 @@ _scu_run_test(int fd, int idx)
 	clock_gettime(CLOCK_MONOTONIC, &start_mono_time);
 	clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &start_cpu_time);
 
-	_scu_failure failures[_SCU_MAX_FAILURES];
 	bool success = true;
 	size_t asserts = 0, num_failures = 0;
 
 	_scu_fatal_assert_jmpbuf_valid = true;
 	_scu_fatal_assert_allowed_thread_id = _scu_get_current_thread_id();
 	if (!setjmp(_scu_fatal_assert_jmpbuf)) {
-		test->func(&success, &asserts, &num_failures, failures);
+		test->func(&success, &asserts, &num_failures, _failures);
 	}
 	_scu_fatal_assert_allowed_thread_id = 0;
 	_scu_fatal_assert_jmpbuf_valid = false;
@@ -339,7 +340,7 @@ _scu_run_test(int fd, int idx)
 	_scu_output_test_end(fd, idx, success, asserts,
 	                     _scu_get_time_diff(start_mono_time, end_mono_time),
 	                     _scu_get_time_diff(start_cpu_time, end_cpu_time),
-	                     num_failures, failures);
+	                     num_failures, _failures);
 }
 
 static void
