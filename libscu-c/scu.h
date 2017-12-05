@@ -145,24 +145,34 @@ _scu_assert_function(bool val, bool is_fatal, const char *message, ...)
 #define _SCU_ASSERT_EQUAL_STRING(actual, expected, is_fatal) \
 	_scu_assert_function((actual) == (expected), is_fatal, "assertion failure: %s == %s", actual, expected)
 #define _SCU_ASSERT_EQUAL(actual, expected, is_fatal) \
-	_Generic ((expected), \
-		int: _SCU_ASSERT_EQUAL_INT((actual), (expected), is_fatal), \
-		unsigned int: _SCU_ASSERT_EQUAL_UNSIGNED_INT((actual), (expected), is_fatal), \
-		float: _SCU_ASSERT_EQUAL_DOUBLE((actual), (expected), is_fatal), \
-		double: _SCU_ASSERT_EQUAL_DOUBLE((actual), (expected), is_fatal), \
-		char *: _SCU_ASSERT_EQUAL_STRING((actual), (expected), is_fatal), \
-		const int: _SCU_ASSERT_EQUAL_INT((actual), (expected), is_fatal), \
-		const unsigned int: _SCU_ASSERT_EQUAL_UNSIGNED_INT((actual), (expected), is_fatal), \
-		const float: _SCU_ASSERT_EQUAL_DOUBLE((actual), (expected), is_fatal), \
-		const double: _SCU_ASSERT_EQUAL_DOUBLE((actual), (expected), is_fatal), \
-		const char *: _SCU_ASSERT_EQUAL_STRING((actual), (expected), is_fatal), \
-		default: _SCU_ASSERT(actual == expected, is_fatal) \
-	)
+	_Generic((expected), \
+	         int \
+	         : _SCU_ASSERT_EQUAL_INT((actual), (expected), is_fatal), \
+	           unsigned int \
+	         : _SCU_ASSERT_EQUAL_UNSIGNED_INT((actual), (expected), is_fatal), \
+	           float \
+	         : _SCU_ASSERT_EQUAL_DOUBLE((actual), (expected), is_fatal), \
+	           double \
+	         : _SCU_ASSERT_EQUAL_DOUBLE((actual), (expected), is_fatal), \
+	           char * \
+	         : _SCU_ASSERT_EQUAL_STRING((actual), (expected), is_fatal), \
+	           const int \
+	         : _SCU_ASSERT_EQUAL_INT((actual), (expected), is_fatal), \
+	           const unsigned int \
+	         : _SCU_ASSERT_EQUAL_UNSIGNED_INT((actual), (expected), is_fatal), \
+	           const float \
+	         : _SCU_ASSERT_EQUAL_DOUBLE((actual), (expected), is_fatal), \
+	           const double \
+	         : _SCU_ASSERT_EQUAL_DOUBLE((actual), (expected), is_fatal), \
+	           const char * \
+	         : _SCU_ASSERT_EQUAL_STRING((actual), (expected), is_fatal), \
+	           default \
+	         : _SCU_ASSERT(actual == expected, is_fatal))
 
 #define SCU_ASSERT(test) _SCU_ASSERT(test, false)
 #define SCU_ASSERT_FATAL(test) _SCU_ASSERT(test, true)
 
-/* Convenience assertion macros */
+	/* Convenience assertion macros */
 
 #define SCU_ASSERT_TRUE(val) \
 	SCU_ASSERT(val)

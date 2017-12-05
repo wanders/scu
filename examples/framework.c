@@ -131,30 +131,30 @@ SCU_TEST(tags, "Test with tags", SCU_TAGS("tag1", "tag2"))
 	SCU_ASSERT(true);
 }
 
-SCU_TEST (assert_equal_int, "Assert equal pretty printing - integer")
+SCU_TEST(assert_equal_int, "Assert equal pretty printing - integer")
 {
 	int x = 1;
 	int y = 2;
-	SCU_ASSERT_EQUAL (x, y);
+	SCU_ASSERT_EQUAL(x, y);
 }
 
-SCU_TEST (assert_equal_unsigned_int, "Assert equal pretty printing - unsigned integer")
+SCU_TEST(assert_equal_unsigned_int, "Assert equal pretty printing - unsigned integer")
 {
 	unsigned int x = -1;
 	unsigned int y = -2;
-	SCU_ASSERT_EQUAL (x, y);
+	SCU_ASSERT_EQUAL(x, y);
 }
 
-SCU_TEST (assert_equal_double, "Assert equal pretty printing - double")
+SCU_TEST(assert_equal_double, "Assert equal pretty printing - double")
 {
 	double x = 1.5;
 	double y = 2.5;
-	SCU_ASSERT_EQUAL (x, y);
+	SCU_ASSERT_EQUAL(x, y);
 }
 
-SCU_TEST (assert_equal_string, "Assert equal pretty printing - string")
+SCU_TEST(assert_equal_string, "Assert equal pretty printing - string")
 {
 	const char *x = "foo";
 	const char *y = "bar";
-	SCU_ASSERT_EQUAL (x, y);
+	SCU_ASSERT_EQUAL(x, y);
 }
