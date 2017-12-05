@@ -71,25 +71,25 @@ void _scu_register_testcase(_scu_testcase *);
 #define SCU_TAGS(...) \
 	.tags = {__VA_ARGS__}
 
-#define SCU_TEST(name, desc, ...)                                                                             \
-	static void name(void);                                                                               \
-	static void _scu_test_wrapper_##name(bool *success, size_t *asserts, size_t *num_failures,            \
-	                                     _scu_failure *failures)                                          \
-	{                                                                                                     \
-		_scu_success = success;                                                                       \
-		_scu_asserts = asserts;                                                                       \
-		_scu_num_failures = num_failures;                                                             \
-		_scu_failures = failures;                                                                     \
-		name();                                                                                       \
-	}                                                                                                     \
-	static void __attribute__((constructor)) _scu_register_##name(void)                                   \
-	{                                                                                                     \
-		_Pragma("GCC diagnostic push");                                                               \
-		_Pragma("GCC diagnostic ignored \"-Wmissing-field-initializers\"");                           \
+#define SCU_TEST(name, desc, ...) \
+	static void name(void); \
+	static void _scu_test_wrapper_##name(bool *success, size_t *asserts, size_t *num_failures, \
+	                                     _scu_failure *failures) \
+	{ \
+		_scu_success = success; \
+		_scu_asserts = asserts; \
+		_scu_num_failures = num_failures; \
+		_scu_failures = failures; \
+		name(); \
+	} \
+	static void __attribute__((constructor)) _scu_register_##name(void) \
+	{ \
+		_Pragma("GCC diagnostic push"); \
+		_Pragma("GCC diagnostic ignored \"-Wmissing-field-initializers\""); \
 		static _scu_testcase tc = {_scu_test_wrapper_##name, __LINE__, #name, (desc), ##__VA_ARGS__}; \
-		_Pragma("GCC diagnostic pop");                                                                \
-		_scu_register_testcase(&tc);                                                                  \
-	}                                                                                                     \
+		_Pragma("GCC diagnostic pop"); \
+		_scu_register_testcase(&tc); \
+	} \
 	static void name(void)
 
 /* Test case addresses */
@@ -99,37 +99,37 @@ void _scu_register_testcase(_scu_testcase *);
 void _scu_handle_fatal_assert(void) __attribute__((noreturn));
 void _scu_fatal_assert_allowed(void);
 
-#define SCU_FAIL(message)                                                                                           \
-	do {                                                                                                        \
-		*_scu_success = false;                                                                              \
-		if (*_scu_num_failures < _SCU_MAX_FAILURES) {                                                       \
-			_scu_failures[*_scu_num_failures].file = __FILE__;                                          \
-			_scu_failures[*_scu_num_failures].line = __LINE__;                                          \
+#define SCU_FAIL(message) \
+	do { \
+		*_scu_success = false; \
+		if (*_scu_num_failures < _SCU_MAX_FAILURES) { \
+			_scu_failures[*_scu_num_failures].file = __FILE__; \
+			_scu_failures[*_scu_num_failures].line = __LINE__; \
 			strncpy(_scu_failures[*_scu_num_failures].msg, (message), _SCU_FAILURE_MESSAGE_LENGTH - 1); \
-			_scu_failures[*_scu_num_failures].msg[_SCU_FAILURE_MESSAGE_LENGTH - 1] = 0;                 \
-			(*_scu_num_failures)++;                                                                     \
-		}                                                                                                   \
+			_scu_failures[*_scu_num_failures].msg[_SCU_FAILURE_MESSAGE_LENGTH - 1] = 0; \
+			(*_scu_num_failures)++; \
+		} \
 	} while (0)
 
-#define _SCU_ASSERT_WITH_MESSAGE(test, is_fatal, message, ...)                            \
-	do {                                                                              \
-		(*_scu_asserts)++;                                                        \
-		if (!(test)) {                                                            \
-			char _scu_fmsg[_SCU_FAILURE_MESSAGE_LENGTH];                      \
+#define _SCU_ASSERT_WITH_MESSAGE(test, is_fatal, message, ...) \
+	do { \
+		(*_scu_asserts)++; \
+		if (!(test)) { \
+			char _scu_fmsg[_SCU_FAILURE_MESSAGE_LENGTH]; \
 			snprintf(_scu_fmsg, sizeof(_scu_fmsg), (message), ##__VA_ARGS__); \
-			SCU_FAIL(_scu_fmsg);                                              \
-			if (is_fatal)                                                     \
-				_scu_handle_fatal_assert();                               \
-		}                                                                         \
+			SCU_FAIL(_scu_fmsg); \
+			if (is_fatal) \
+				_scu_handle_fatal_assert(); \
+		} \
 	} while (0)
 
 #define SCU_ASSERT_WITH_MESSAGE(test, message, ...) _SCU_ASSERT_WITH_MESSAGE(test, false, ##__VA_ARGS__)
 #define SCU_ASSERT_WITH_MESSAGE_FATAL(test, message, ...) _SCU_ASSERT_WITH_MESSAGE(test, true, ##__VA_ARGS__)
 
-#define _SCU_ASSERT(test, is_fatal)                                                                   \
-	do {                                                                                          \
-		if (is_fatal)                                                                         \
-			_scu_fatal_assert_allowed();                                                  \
+#define _SCU_ASSERT(test, is_fatal) \
+	do { \
+		if (is_fatal) \
+			_scu_fatal_assert_allowed(); \
 		_SCU_ASSERT_WITH_MESSAGE((test), is_fatal, "assertion failure: %s", STRINGIFY(test)); \
 	} while (0)
 
