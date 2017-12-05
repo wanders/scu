@@ -1,4 +1,4 @@
-CFLAGS+=-I$(SCU_DIR)
+CFLAGS+=-I$(SCU_DIR)/libscu-c/
 
 .PHONY: test build clean
 
@@ -17,7 +17,7 @@ clean::
 	rm -f $(TESTCASES) $(patsubst %,%.o,$(TESTCASES)) $(patsubst %,valgrind.%.log,$(TESTCASES))
 
 $(TESTCASES): %:%.o
-	$(CC) -o $@ $< $(SCU_DIR)/scu.c -Wl,$(SCU_DIR)/testcases.lds $(CFLAGS)
+	$(CC) -o $@ $< -Wl,$(SCU_DIR)/testcases.lds -L$(SCU_DIR)/libscu-c/ -lscu-c
 
 %.o: %.c
 	$(CC) -c -o $@ $< $(CFLAGS)
