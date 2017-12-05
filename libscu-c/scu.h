@@ -140,32 +140,32 @@ void _scu_fatal_assert_allowed(void);
 #define SCU_ASSERT_FALSE(val) \
 	SCU_ASSERT(!(val))
 
-#define SCU_ASSERT_EQUAL(a, b) \
-	SCU_ASSERT((a) == (b))
+#define SCU_ASSERT_EQUAL(actual, expected) \
+	SCU_ASSERT((actual) == (expected))
 
-#define SCU_ASSERT_NOT_EQUAL(a, b) \
-	SCU_ASSERT((a) != (b))
+#define SCU_ASSERT_NOT_EQUAL(actual, expected) \
+	SCU_ASSERT((actual) != (expected))
 
-#define SCU_ASSERT_MEM_EQUAL(a, b, size) \
-	SCU_ASSERT(memcmp((a), (b), (size)) == 0)
+#define SCU_ASSERT_MEM_EQUAL(actual, expected, size) \
+	SCU_ASSERT(memcmp((actual), (expected), (size)) == 0)
 
 #define SCU_ASSERT_PTR_NULL(ptr) \
-	SCU_ASSERT((void *)(ptr) == NULL)
+	SCU_ASSERT((ptr) == NULL)
 
 #define SCU_ASSERT_PTR_NOT_NULL(ptr) \
 	SCU_ASSERT((ptr) != NULL)
 
-#define SCU_ASSERT_PTR_EQUAL(a, b) \
-	SCU_ASSERT((void *)(a) == (void *)(b))
+#define SCU_ASSERT_PTR_EQUAL(actual, expected) \
+	SCU_ASSERT((actual) == (expected))
 
-#define SCU_ASSERT_PTR_NOT_EQUAL(a, b) \
-	SCU_ASSERT((void *)(a) != (void *)(b))
+#define SCU_ASSERT_PTR_NOT_EQUAL(actual, expected) \
+	SCU_ASSERT((actual) != (expected))
 
-#define SCU_ASSERT_STRING_EQUAL(a, b) \
-	SCU_ASSERT(strcmp((const char *)(a), (const char *)(b)) == 0)
+#define SCU_ASSERT_STRING_EQUAL(actual, expected) \
+	SCU_ASSERT(strcmp((actual), (expected)) == 0)
 
-#define SCU_ASSERT_NSTRING_EQUAL(a, b, size) \
-	SCU_ASSERT(strncmp((const char *)(a), (const char *)(b), (size)) == 0)
+#define SCU_ASSERT_NSTRING_EQUAL(actual, expected, size) \
+	SCU_ASSERT(strncmp((actual), (expected), (size)) == 0)
 
 #define SCU_ASSERT_TRUE_FATAL(val) \
 	SCU_ASSERT_FATAL(val)
@@ -173,32 +173,32 @@ void _scu_fatal_assert_allowed(void);
 #define SCU_ASSERT_FALSE_FATAL(val) \
 	SCU_ASSERT_FATAL(!(val))
 
-#define SCU_ASSERT_EQUAL_FATAL(a, b) \
-	SCU_ASSERT_FATAL((a) == (b))
+#define SCU_ASSERT_EQUAL_FATAL(actual, expected) \
+	SCU_ASSERT_FATAL((actual) == (expected))
 
-#define SCU_ASSERT_NOT_EQUAL_FATAL(a, b) \
-	SCU_ASSERT_FATAL((a) != (b))
+#define SCU_ASSERT_NOT_EQUAL_FATAL(actual, expected) \
+	SCU_ASSERT_FATAL((actual) != (expected))
 
-#define SCU_ASSERT_MEM_EQUAL_FATAL(a, b, size) \
-	SCU_ASSERT_FATAL(memcmp((a), (b), (size)) == 0)
+#define SCU_ASSERT_MEM_EQUAL_FATAL(actual, expected, size) \
+	SCU_ASSERT_FATAL(memcmp((actual), (expected), (size)) == 0)
 
 #define SCU_ASSERT_PTR_NULL_FATAL(ptr) \
-	SCU_ASSERT_FATAL((void *)(ptr) == NULL)
+	SCU_ASSERT_FATAL((ptr) == NULL)
 
 #define SCU_ASSERT_PTR_NOT_NULL_FATAL(ptr) \
 	SCU_ASSERT_FATAL((ptr) != NULL)
 
-#define SCU_ASSERT_PTR_EQUAL_FATAL(a, b) \
-	SCU_ASSERT_FATAL((void *)(a) == (void *)(b))
+#define SCU_ASSERT_PTR_EQUAL_FATAL(actual, expected) \
+	SCU_ASSERT_FATAL((actual) == (expected))
 
-#define SCU_ASSERT_PTR_NOT_EQUAL_FATAL(a, b) \
-	SCU_ASSERT_FATAL((void *)(a) != (void *)(b))
+#define SCU_ASSERT_PTR_NOT_EQUAL_FATAL(actual, expected) \
+	SCU_ASSERT_FATAL((actual) != (expected))
 
-#define SCU_ASSERT_STRING_EQUAL_FATAL(a, b) \
-	SCU_ASSERT_FATAL(strcmp((const char *)(a), (const char *)(b)) == 0)
+#define SCU_ASSERT_STRING_EQUAL_FATAL(actual, expected) \
+	SCU_ASSERT_FATAL(strcmp((actual), (expected)) == 0)
 
-#define SCU_ASSERT_NSTRING_EQUAL_FATAL(a, b, size) \
-	SCU_ASSERT_FATAL(strncmp((const char *)(a), (const char *)(b), (size)) == 0)
+#define SCU_ASSERT_NSTRING_EQUAL_FATAL(actual, expected, size) \
+	SCU_ASSERT_FATAL(strncmp((actual), (expected), (size)) == 0)
 
 #ifdef __cplusplus
 }
