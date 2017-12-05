@@ -84,7 +84,10 @@ void _scu_register_testcase(_scu_testcase *);
 	}                                                                                                     \
 	static void __attribute__((constructor)) _scu_register_##name(void)                                   \
 	{                                                                                                     \
+		_Pragma("GCC diagnostic push");                                                               \
+		_Pragma("GCC diagnostic ignored \"-Wmissing-field-initializers\"");                           \
 		static _scu_testcase tc = {_scu_test_wrapper_##name, __LINE__, #name, (desc), ##__VA_ARGS__}; \
+		_Pragma("GCC diagnostic pop");                                                                \
 		_scu_register_testcase(&tc);                                                                  \
 	}                                                                                                     \
 	static void name(void)
