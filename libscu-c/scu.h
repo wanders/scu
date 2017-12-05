@@ -113,6 +113,8 @@ void _scu_fatal_assert_allowed(void);
 
 #define _SCU_ASSERT_WITH_MESSAGE(test, is_fatal, message, ...) \
 	do { \
+		if (is_fatal) \
+			_scu_fatal_assert_allowed(); \
 		(*_scu_asserts)++; \
 		if (!(test)) { \
 			char _scu_fmsg[_SCU_FAILURE_MESSAGE_LENGTH]; \
@@ -127,11 +129,7 @@ void _scu_fatal_assert_allowed(void);
 #define SCU_ASSERT_WITH_MESSAGE_FATAL(test, message, ...) _SCU_ASSERT_WITH_MESSAGE(test, true, message, ##__VA_ARGS__)
 
 #define _SCU_ASSERT(test, is_fatal) \
-	do { \
-		if (is_fatal) \
-			_scu_fatal_assert_allowed(); \
-		_SCU_ASSERT_WITH_MESSAGE((test), is_fatal, "assertion failure: %s", STRINGIFY(test)); \
-	} while (0)
+	_SCU_ASSERT_WITH_MESSAGE((test), is_fatal, "assertion failure: %s", STRINGIFY(test))
 
 #define SCU_ASSERT(test) _SCU_ASSERT(test, false)
 #define SCU_ASSERT_FATAL(test) _SCU_ASSERT(test, true)
