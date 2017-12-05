@@ -5,6 +5,7 @@
 extern "C" {
 #endif
 
+#include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
@@ -111,27 +112,52 @@ void _scu_fatal_assert_allowed(void);
 		} \
 	} while (0)
 
-#define _SCU_ASSERT_WITH_MESSAGE(test, is_fatal, message, ...) \
-	do { \
-		(*_scu_asserts)++; \
-		if (!(test)) { \
-			char _scu_fmsg[_SCU_FAILURE_MESSAGE_LENGTH]; \
-			snprintf(_scu_fmsg, sizeof(_scu_fmsg), (message), ##__VA_ARGS__); \
-			SCU_FAIL(_scu_fmsg); \
-			if (is_fatal) {\
-				_scu_fatal_assert_allowed(); \
-				_scu_handle_fatal_assert(); \
-			} \
-		} \
-	} while (0)
+__attribute__((used)) static inline void
+_scu_assert_function(bool val, bool is_fatal, const char *message, ...)
+{
+	(*_scu_asserts)++;
+	if (!val) {
+		char _scu_fmsg[_SCU_FAILURE_MESSAGE_LENGTH];
+		va_list vargs;
+		va_start(vargs, message);
+		vsnprintf(_scu_fmsg, sizeof(_scu_fmsg), message, vargs);
+		va_end(vargs);
+		SCU_FAIL(_scu_fmsg);
+		if (is_fatal) {
+			_scu_fatal_assert_allowed();
+			_scu_handle_fatal_assert();
+		}
+	}
+}
 
-#define SCU_ASSERT_WITH_MESSAGE(test, message, ...) _SCU_ASSERT_WITH_MESSAGE(test, false, ##__VA_ARGS__)
-#define SCU_ASSERT_WITH_MESSAGE_FATAL(test, message, ...) _SCU_ASSERT_WITH_MESSAGE(test, true, ##__VA_ARGS__)
+#define SCU_ASSERT_WITH_MESSAGE(test, message, ...) _scu_assert_function(test, false, ##__VA_ARGS__)
+#define SCU_ASSERT_WITH_MESSAGE_FATAL(test, message, ...) _scu_assert_function(test, true, ##__VA_ARGS__)
 
 #define _SCU_ASSERT(test, is_fatal) \
-	do { \
-		_SCU_ASSERT_WITH_MESSAGE((test), is_fatal, "assertion failure: %s", STRINGIFY(test)); \
-	} while (0)
+	_scu_assert_function((test), is_fatal, "assertion failure: %s", STRINGIFY(test))
+
+#define _SCU_ASSERT_EQUAL_INT(actual, expected, is_fatal) \
+	_scu_assert_function((actual) == (expected), is_fatal, "assertion failure: %d == %d", actual, expected)
+#define _SCU_ASSERT_EQUAL_UNSIGNED_INT(actual, expected, is_fatal) \
+	_scu_assert_function((actual) == (expected), is_fatal, "assertion failure: %u == %u", actual, expected)
+#define _SCU_ASSERT_EQUAL_DOUBLE(actual, expected, is_fatal) \
+	_scu_assert_function((actual) == (expected), is_fatal, "assertion failure: %f == %f", actual, expected)
+#define _SCU_ASSERT_EQUAL_STRING(actual, expected, is_fatal) \
+	_scu_assert_function((actual) == (expected), is_fatal, "assertion failure: %s == %s", actual, expected)
+#define _SCU_ASSERT_EQUAL(actual, expected, is_fatal) \
+	_Generic ((expected), \
+		int: _SCU_ASSERT_EQUAL_INT((actual), (expected), is_fatal), \
+		unsigned int: _SCU_ASSERT_EQUAL_UNSIGNED_INT((actual), (expected), is_fatal), \
+		float: _SCU_ASSERT_EQUAL_DOUBLE((actual), (expected), is_fatal), \
+		double: _SCU_ASSERT_EQUAL_DOUBLE((actual), (expected), is_fatal), \
+		char *: _SCU_ASSERT_EQUAL_STRING((actual), (expected), is_fatal), \
+		const int: _SCU_ASSERT_EQUAL_INT((actual), (expected), is_fatal), \
+		const unsigned int: _SCU_ASSERT_EQUAL_UNSIGNED_INT((actual), (expected), is_fatal), \
+		const float: _SCU_ASSERT_EQUAL_DOUBLE((actual), (expected), is_fatal), \
+		const double: _SCU_ASSERT_EQUAL_DOUBLE((actual), (expected), is_fatal), \
+		const char *: _SCU_ASSERT_EQUAL_STRING((actual), (expected), is_fatal), \
+		default: _SCU_ASSERT(actual == expected, is_fatal) \
+	)
 
 #define SCU_ASSERT(test) _SCU_ASSERT(test, false)
 #define SCU_ASSERT_FATAL(test) _SCU_ASSERT(test, true)
@@ -145,13 +171,13 @@ void _scu_fatal_assert_allowed(void);
 	SCU_ASSERT(!(val))
 
 #define SCU_ASSERT_EQUAL(actual, expected) \
-	SCU_ASSERT((actual) == (expected))
+	_SCU_ASSERT_EQUAL(actual, expected, false)
 
 #define SCU_ASSERT_NOT_EQUAL(actual, expected) \
 	SCU_ASSERT((actual) != (expected))
 
 #define SCU_ASSERT_MEM_EQUAL(actual, expected, size) \
-	SCU_ASSERT(memcmp((actual), (expected), (size)) == 0)
+	SCU_ASSERT(memcmp(actual, expected, size) == 0)
 
 #define SCU_ASSERT_PTR_NULL(ptr) \
 	SCU_ASSERT((ptr) == NULL)
@@ -166,10 +192,10 @@ void _scu_fatal_assert_allowed(void);
 	SCU_ASSERT((actual) != (expected))
 
 #define SCU_ASSERT_STRING_EQUAL(actual, expected) \
-	SCU_ASSERT(strcmp((actual), (expected)) == 0)
+	SCU_ASSERT(strcmp(actual, expected) == 0)
 
 #define SCU_ASSERT_NSTRING_EQUAL(actual, expected, size) \
-	SCU_ASSERT(strncmp((actual), (expected), (size)) == 0)
+	SCU_ASSERT(strncmp(actual, expected, size) == 0)
 
 #define SCU_ASSERT_TRUE_FATAL(val) \
 	SCU_ASSERT_FATAL(val)
@@ -178,13 +204,13 @@ void _scu_fatal_assert_allowed(void);
 	SCU_ASSERT_FATAL(!(val))
 
 #define SCU_ASSERT_EQUAL_FATAL(actual, expected) \
-	SCU_ASSERT_FATAL((actual) == (expected))
+	_SCU_ASSERT_EQUAL(actual, expected, true)
 
 #define SCU_ASSERT_NOT_EQUAL_FATAL(actual, expected) \
 	SCU_ASSERT_FATAL((actual) != (expected))
 
 #define SCU_ASSERT_MEM_EQUAL_FATAL(actual, expected, size) \
-	SCU_ASSERT_FATAL(memcmp((actual), (expected), (size)) == 0)
+	SCU_ASSERT_FATAL(memcmp(actual, expected, size) == 0)
 
 #define SCU_ASSERT_PTR_NULL_FATAL(ptr) \
 	SCU_ASSERT_FATAL((ptr) == NULL)
@@ -199,10 +225,10 @@ void _scu_fatal_assert_allowed(void);
 	SCU_ASSERT_FATAL((actual) != (expected))
 
 #define SCU_ASSERT_STRING_EQUAL_FATAL(actual, expected) \
-	SCU_ASSERT_FATAL(strcmp((actual), (expected)) == 0)
+	SCU_ASSERT_FATAL(strcmp(actual, expected) == 0)
 
 #define SCU_ASSERT_NSTRING_EQUAL_FATAL(actual, expected, size) \
-	SCU_ASSERT_FATAL(strncmp((actual), (expected), (size)) == 0)
+	SCU_ASSERT_FATAL(strncmp(actual, expected, size) == 0)
 
 #ifdef __cplusplus
 }
