@@ -16,8 +16,11 @@ build: $(TESTCASES)
 clean::
 	rm -f $(TESTCASES) $(patsubst %,%.o,$(TESTCASES)) $(patsubst %,valgrind.%.log,$(TESTCASES))
 
-$(TESTCASES): %:%.o
+$(TESTCASES): %:%.o $(SCU_DIR)/libscu-c/libscu-c.a
 	$(CC) -o $@ $< -L$(SCU_DIR)/libscu-c/ -lscu-c
+
+$(SCU_DIR)/libscu-c/libscu-c.a:
+	make -C $(SCU_DIR)/libscu-c
 
 %.o: %.c
 	$(CC) -c -o $@ $< $(CFLAGS)
