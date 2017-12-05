@@ -17,7 +17,7 @@ clean::
 	rm -f $(TESTCASES) $(patsubst %,%.o,$(TESTCASES)) $(patsubst %,valgrind.%.log,$(TESTCASES))
 
 $(TESTCASES): %:%.o
-	$(CC) -o $@ $< -Wl,$(SCU_DIR)/testcases.lds -L$(SCU_DIR)/libscu-c/ -lscu-c
+	$(CC) -o $@ $< -L$(SCU_DIR)/libscu-c/ -lscu-c
 
 %.o: %.c
 	$(CC) -c -o $@ $< $(CFLAGS)

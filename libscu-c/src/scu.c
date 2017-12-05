@@ -449,12 +449,19 @@ _scu_line_comparator(const void *a, const void *b)
 	return (*ta)->line - (*tb)->line;
 }
 
+void
+_scu_register_testcase(_scu_testcase *tc)
+{
+	if (((_scu_module_num_tests + 1) & _scu_module_num_tests) == 0) {
+		_scu_module_tests = realloc(_scu_module_tests, sizeof(_scu_testcase *) * (_scu_module_num_tests + 1) * 2);
+	}
+	_scu_module_tests[_scu_module_num_tests] = tc;
+	_scu_module_num_tests++;
+}
+
 int
 main(int argc, char *argv[])
 {
-	_scu_module_tests = &_scu_testcases_start;
-	_scu_module_num_tests = ((void *)&_scu_testcases_end - (void *)&_scu_testcases_start) / sizeof(_scu_testcase *);
-
 	_scu_arguments args = {0};
 
 	argp_parse(&argp, argc, argv, 0, 0, &args);

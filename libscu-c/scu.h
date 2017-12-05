@@ -66,29 +66,30 @@ typedef struct {
 	const char *tags[_SCU_MAX_TAGS];
 } _scu_testcase;
 
+void _scu_register_testcase(_scu_testcase *);
+
 #define SCU_TAGS(...) \
 	.tags = {__VA_ARGS__}
 
-#define SCU_TEST(name, desc, ...)                                                                                       \
-	static void name(void);                                                                                         \
-	static void _scu_test_wrapper_##name(bool *success, size_t *asserts, size_t *num_failures,                      \
-	                                     _scu_failure *failures)                                                    \
-	{                                                                                                               \
-		_scu_success = success;                                                                                 \
-		_scu_asserts = asserts;                                                                                 \
-		_scu_num_failures = num_failures;                                                                       \
-		_scu_failures = failures;                                                                               \
-		name();                                                                                                 \
-	}                                                                                                               \
-	static _scu_testcase _scu_testcase_##name = {_scu_test_wrapper_##name, __LINE__, #name, (desc), ##__VA_ARGS__}; \
-	static _scu_testcase *_scu_testcase_ptr_##name __attribute__((used))                                            \
-	    __attribute__((section(".scu.testcases"))) = &_scu_testcase_##name;                                         \
+#define SCU_TEST(name, desc, ...)                                                                             \
+	static void name(void);                                                                               \
+	static void _scu_test_wrapper_##name(bool *success, size_t *asserts, size_t *num_failures,            \
+	                                     _scu_failure *failures)                                          \
+	{                                                                                                     \
+		_scu_success = success;                                                                       \
+		_scu_asserts = asserts;                                                                       \
+		_scu_num_failures = num_failures;                                                             \
+		_scu_failures = failures;                                                                     \
+		name();                                                                                       \
+	}                                                                                                     \
+	static void __attribute__((constructor)) _scu_register_##name(void)                                   \
+	{                                                                                                     \
+		static _scu_testcase tc = {_scu_test_wrapper_##name, __LINE__, #name, (desc), ##__VA_ARGS__}; \
+		_scu_register_testcase(&tc);                                                                  \
+	}                                                                                                     \
 	static void name(void)
 
 /* Test case addresses */
-
-extern _scu_testcase *_scu_testcases_start;
-extern _scu_testcase *_scu_testcases_end;
 
 /* Assertion functions */
 
