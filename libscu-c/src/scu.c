@@ -66,11 +66,14 @@ _scu_output_module_list(int fd, const char *modulename)
 }
 
 static void
-_scu_output_test_list(int fd, const char *name, const char *description, const char *tags[])
+_scu_output_test_list(int fd, int line, const char *name, const char *description, const char *tags[])
 {
 	json_object_start(fd);
 	json_object_key(fd, "event");
 	json_string(fd, "testcase_list");
+	json_separator(fd);
+	json_object_key(fd, "line");
+	json_integer(fd, line);
 	json_separator(fd);
 	json_object_key(fd, "name");
 	json_string(fd, name);
@@ -260,7 +263,7 @@ list_tests(void)
 
 	for (size_t i = 0; i < _scu_module_num_tests; i++) {
 		_scu_testcase *test = _scu_module_tests[i];
-		_scu_output_test_list(cmd, test->name, test->desc, test->tags);
+		_scu_output_test_list(cmd, test->line, test->name, test->desc, test->tags);
 	}
 }
 
