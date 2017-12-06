@@ -7,8 +7,8 @@
 
 #define _SCU_JSON_STRING_LENGTH 1024
 
-#define _SCU_ASCII_BACKSLASH 92
-#define _SCU_ASCII_DOUBLE_QUOTE 34
+#define _SCU_ASCII_BACKSLASH '\\'
+#define _SCU_ASCII_DOUBLE_QUOTE '"'
 
 static inline int __attribute__((used))
 json_true(int fd)
@@ -28,13 +28,15 @@ static inline void __attribute__((used))
 json_escape_string(char *out, const char *in)
 {
 	size_t out_i = 0;
-	for (size_t in_i = 0; (in[in_i] != 0) && (in_i < _SCU_JSON_STRING_LENGTH - 1); in_i++) {
+	for (size_t in_i = 0; (in_i < _SCU_JSON_STRING_LENGTH) && (out_i < _SCU_JSON_STRING_LENGTH - 1) && (in[in_i] != 0); in_i++) {
 		if (in[in_i] == _SCU_ASCII_BACKSLASH || in[in_i] == _SCU_ASCII_DOUBLE_QUOTE) {
+			if (out_i >= _SCU_JSON_STRING_LENGTH - 1)
+				break;
 			out[out_i++] = _SCU_ASCII_BACKSLASH;
 		} else if (in[in_i] == '\n') {
+			if (out_i >= _SCU_JSON_STRING_LENGTH - 2)
+				break;
 			out[out_i++] = _SCU_ASCII_BACKSLASH;
-			/* XXX possible buffer overflow */
-			/* also might need to escape more chars */
 			out[out_i++] = 'n';
 			continue;
 		}
