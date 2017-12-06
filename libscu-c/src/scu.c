@@ -193,6 +193,29 @@ _scu_output_test_failure(int fd, _scu_failure *failure)
 	json_separator(fd);
 	json_object_key(fd, "message");
 	json_string(fd, failure->msg);
+	json_separator(fd);
+	json_object_key(fd, "assert_method");
+	json_string(fd, failure->assert_method);
+	if (failure->lhs[0]) {
+		json_separator(fd);
+		json_object_key(fd, "lhs");
+		json_string(fd, failure->lhs);
+	}
+	if (failure->rhs[0]) {
+		json_separator(fd);
+		json_object_key(fd, "rhs");
+		json_string(fd, failure->rhs);
+	}
+	if (failure->lhs_value[0]) {
+		json_separator(fd);
+		json_object_key(fd, "lhs_value");
+		json_string(fd, failure->lhs_value);
+	}
+	if (failure->rhs_value[0]) {
+		json_separator(fd);
+		json_object_key(fd, "rhs_value");
+		json_string(fd, failure->rhs_value);
+	}
 	json_object_end(fd);
 }
 
@@ -305,7 +328,70 @@ _scu_handle_fatal_assert(void)
 	longjmp(_scu_fatal_assert_jmpbuf, 1);
 }
 
-static _scu_failure _failures[_SCU_MAX_FAILURES];
+static bool _scu_success;
+static size_t _scu_num_failures;
+static _scu_failure _scu_failures[_SCU_MAX_FAILURES];
+;
+size_t _scu_num_asserts;
+
+_scu_failure *
+_scu_report_failure(const char *file, int line, const char *assert_method)
+{
+	_scu_failure *res;
+
+	_scu_success = false;
+
+	if (_scu_num_failures >= _SCU_MAX_FAILURES)
+		return NULL;
+
+	res = &_scu_failures[_scu_num_failures];
+	_scu_num_failures++;
+
+	*res = (_scu_failure){
+	    .file = file,
+	    .line = line,
+	    .assert_method = assert_method};
+
+	return res;
+}
+
+void
+_scu_cescape_str(char *dest, size_t siz, const char *src)
+{
+	int o = 0;
+
+	assert(siz >= 3);
+
+	dest[o++] = '"';
+
+	for (int i = 0; src[i]; i++) {
+		unsigned char c = src[i];
+		if (c == '\n') {
+			if (o + 2 >= siz - 2)
+				break;
+			dest[o++] = '\\';
+			dest[o++] = 'n';
+		} else if (c == '\t') {
+			if (o + 2 >= siz - 2)
+				break;
+			dest[o++] = '\\';
+			dest[o++] = 't';
+		} else if (c < 32 || c >= 127) {
+			if (o + 4 >= siz - 2)
+				break;
+			dest[o++] = '\\';
+			dest[o++] = 'x';
+			dest[o++] = "0123456789abcdef"[c >> 4];
+			dest[o++] = "0123456789abcdef"[c & 15];
+		} else {
+			if (o + 1 >= siz - 2)
+				break;
+			dest[o++] = c;
+		}
+	}
+	dest[o++] = '"';
+	dest[o++] = 0;
+}
 
 static void
 _scu_run_test(int fd, int idx)
@@ -324,13 +410,14 @@ _scu_run_test(int fd, int idx)
 	clock_gettime(CLOCK_MONOTONIC, &start_mono_time);
 	clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &start_cpu_time);
 
-	bool success = true;
-	size_t asserts = 0, num_failures = 0;
+	_scu_success = true;
+	_scu_num_asserts = 0;
+	_scu_num_failures = 0;
 
 	_scu_fatal_assert_jmpbuf_valid = true;
 	_scu_fatal_assert_allowed_thread_id = _scu_get_current_thread_id();
 	if (!setjmp(_scu_fatal_assert_jmpbuf)) {
-		test->func(&success, &asserts, &num_failures, _failures);
+		test->func();
 	}
 	_scu_fatal_assert_allowed_thread_id = 0;
 	_scu_fatal_assert_jmpbuf_valid = false;
@@ -340,10 +427,10 @@ _scu_run_test(int fd, int idx)
 
 	_scu_after_each();
 
-	_scu_output_test_end(fd, idx, success, asserts,
+	_scu_output_test_end(fd, idx, _scu_success, _scu_num_asserts,
 	                     _scu_get_time_diff(start_mono_time, end_mono_time),
 	                     _scu_get_time_diff(start_cpu_time, end_cpu_time),
-	                     num_failures, _failures);
+	                     _scu_num_failures, _scu_failures);
 }
 
 static void

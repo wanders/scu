@@ -17,11 +17,6 @@ extern "C" {
 #define _SCU_MAX_FAILURES 1024
 #define _SCU_FAILURE_MESSAGE_LENGTH 2048
 
-/* Helper macros */
-
-#define STRINGIFY_NOEXPAND(x) #x
-#define STRINGIFY(x) STRINGIFY_NOEXPAND(x)
-
 /* Test module functions */
 
 void _scu_setup(void);
@@ -49,18 +44,20 @@ void _scu_after_each(void);
 typedef struct {
 	const char *file;
 	int line;
+	const char *assert_method;
 	char msg[_SCU_FAILURE_MESSAGE_LENGTH];
+	char lhs[256];
+	char rhs[256];
+	char lhs_value[256];
+	char rhs_value[256];
 } _scu_failure;
 
-static bool *_scu_success __attribute__((used));
-static size_t *_scu_asserts __attribute__((used));
-static size_t *_scu_num_failures __attribute__((used));
-static _scu_failure *_scu_failures __attribute__((used));
+extern size_t _scu_num_asserts;
 
 /* Test case definition */
 
 typedef struct {
-	void (*func)(bool *, size_t *, size_t *, _scu_failure *);
+	void (*func)(void);
 	int line;
 	const char *name;
 	const char *desc;
@@ -68,153 +65,241 @@ typedef struct {
 } _scu_testcase;
 
 void _scu_register_testcase(_scu_testcase *);
+void _scu_handle_fatal_assert(void) __attribute__((noreturn));
+void _scu_fatal_assert_allowed(void);
+_scu_failure *_scu_report_failure(const char *file, int line, const char *assert_method);
+void _scu_cescape_str(char *dest, size_t siz, const char *src);
+
+static void
+_scu_strlcpy(char *dst, size_t siz, const char *src)
+{
+	size_t pos = 0;
+	for (;;) {
+		if (pos == siz - 1) {
+			dst[pos] = 0;
+			break;
+		}
+		dst[pos] = src[pos];
+		if (!src[pos])
+			break;
+		pos++;
+	}
+}
+
+static inline void
+_scu_account_assert(bool is_fatal)
+{
+	if (is_fatal)
+		_scu_fatal_assert_allowed();
+	_scu_num_asserts++;
+}
+
+static inline void
+_scu_handle_assert(const char *file, int line, bool cond, bool is_fatal, const char *assert_method, const char *msg, const char *actual, const char *expected, const char *actual_value, const char *expected_value)
+{
+	if (cond)
+		return;
+
+	_scu_failure *fail = _scu_report_failure(file, line, assert_method);
+	if (fail) {
+		_scu_strlcpy(fail->lhs, sizeof(fail->lhs), actual ?: "");
+		_scu_strlcpy(fail->rhs, sizeof(fail->rhs), expected ?: "");
+		_scu_strlcpy(fail->lhs_value, sizeof(fail->lhs_value), actual_value ?: "");
+		_scu_strlcpy(fail->rhs_value, sizeof(fail->rhs_value), expected_value ?: "");
+		_scu_strlcpy(fail->msg, sizeof(fail->msg), msg ?: "");
+	}
+
+	if (is_fatal)
+		_scu_handle_fatal_assert();
+}
+
+static inline void
+_scu_prettyprint_numeric_value(char *buf, size_t bufsiz, unsigned long long value)
+{
+	if (value & 1LLU << 63) {
+		snprintf(buf, bufsiz, "%llu (0x%llx == %lld)", value, value, value);
+	} else {
+		snprintf(buf, bufsiz, "%llu (0x%llx)", value, value);
+	}
+}
+
+static inline void
+_scu_prettyprint_pointer_value(char *buf, size_t bufsiz, const void *value)
+{
+	if (value) {
+		snprintf(buf, bufsiz, "%p", value);
+	} else {
+		snprintf(buf, bufsiz, "NULL");
+	}
+}
+
+static inline void
+_scu_handle_assert_int(const char *file, int line, unsigned long long actual, unsigned long long expected, bool is_fatal, bool inverse, const char *assert_method, const char *actual_str, const char *expected_str)
+{
+	if ((actual != expected) ^ inverse) {
+		char actual_value[64];
+		char expected_value[64];
+		_scu_prettyprint_numeric_value(actual_value, sizeof(actual_value), actual);
+		_scu_prettyprint_numeric_value(expected_value, sizeof(expected_value), expected);
+		_scu_handle_assert(file, line, false, is_fatal, assert_method, NULL, actual_str, expected_str, actual_value, expected_value);
+	}
+}
+
+static inline void
+_scu_handle_assert_ptr(const char *file, int line, const void *actual, const void *expected, bool is_fatal, bool inverse, const char *assert_method, const char *actual_str, const char *expected_str)
+{
+	if ((actual != expected) ^ inverse) {
+		char actual_value[20];
+		char expected_value[20];
+		_scu_prettyprint_pointer_value(actual_value, sizeof(actual_value), actual);
+		if (expected_str) {
+			if (inverse && expected == NULL) {
+				_scu_strlcpy(expected_value, sizeof(expected_value), "<NOT NULL>");
+			} else {
+				_scu_prettyprint_pointer_value(expected_value, sizeof(expected_value), expected);
+			}
+		}
+		_scu_handle_assert(file, line, false, is_fatal, assert_method, NULL, actual_str, expected_str, actual_value, expected_str ? expected_value : NULL);
+	}
+}
+
+static inline void
+_scu_handle_assert_nstr(const char *file, int line, const char *actual, const char *expected, int size, bool is_fatal, bool inverse, const char *assert_method, const char *actual_str, const char *expected_str)
+{
+	int res;
+	if (size == -1) {
+		res = strcmp(actual, expected);
+	} else {
+		res = strncmp(actual, expected, size);
+	}
+	if ((res != 0) ^ inverse) {
+		char actual_value[256];
+		char expected_value[256];
+
+		/* TODO: For overlong strings find the (first) section where they differ */
+		_scu_cescape_str(actual_value, sizeof(actual_value), actual);
+		_scu_cescape_str(expected_value, sizeof(expected_value), expected);
+		_scu_handle_assert(file, line, false, is_fatal, assert_method, NULL, actual_str, expected_str, actual_value, expected_value);
+	}
+}
 
 #define SCU_TAGS(...) \
 	.tags = {__VA_ARGS__}
 
 #define SCU_TEST(name, desc, ...) \
 	static void name(void); \
-	static void _scu_test_wrapper_##name(bool *success, size_t *asserts, size_t *num_failures, \
-	                                     _scu_failure *failures) \
-	{ \
-		_scu_success = success; \
-		_scu_asserts = asserts; \
-		_scu_num_failures = num_failures; \
-		_scu_failures = failures; \
-		name(); \
-	} \
 	static void __attribute__((constructor)) _scu_register_##name(void) \
 	{ \
 		_Pragma("GCC diagnostic push"); \
 		_Pragma("GCC diagnostic ignored \"-Wmissing-field-initializers\""); \
-		static _scu_testcase tc = {_scu_test_wrapper_##name, __LINE__, #name, (desc), ##__VA_ARGS__}; \
+		static _scu_testcase tc = {name, __LINE__, #name, (desc), ##__VA_ARGS__}; \
 		_Pragma("GCC diagnostic pop"); \
 		_scu_register_testcase(&tc); \
 	} \
 	static void name(void)
 
-/* Test case addresses */
-
-/* Assertion functions */
-
-void _scu_handle_fatal_assert(void) __attribute__((noreturn));
-void _scu_fatal_assert_allowed(void);
+	/* Assertion functions */
 
 #define SCU_FAIL(message) \
+	_scu_handle_assert(__FILE__, __LINE__, false, false, "SCU_FAIL", message, NULL, NULL, NULL, NULL);
+#define SCU_FATAL(message) \
+	_scu_handle_assert(__FILE__, __LINE__, true, false, "SCU_FATAL", message, NULL, NULL, NULL, NULL);
+
+#define _SCU_ASSERT_WITH_MESSAGE(test, is_fatal, assert_method, message, ...) \
 	do { \
-		*_scu_success = false; \
-		if (*_scu_num_failures < _SCU_MAX_FAILURES) { \
-			_scu_failures[*_scu_num_failures].file = __FILE__; \
-			_scu_failures[*_scu_num_failures].line = __LINE__; \
-			strncpy(_scu_failures[*_scu_num_failures].msg, (message), _SCU_FAILURE_MESSAGE_LENGTH - 1); \
-			_scu_failures[*_scu_num_failures].msg[_SCU_FAILURE_MESSAGE_LENGTH - 1] = 0; \
-			(*_scu_num_failures)++; \
+		_scu_account_assert(is_fatal); \
+		if (!(test)) { \
+			char _scu_assert_msg[1024]; \
+			snprintf(_scu_assert_msg, sizeof(_scu_assert_msg), message, ##__VA_ARGS__); \
+			_scu_handle_assert(__FILE__, __LINE__, is_fatal, false, assert_method, _scu_assert_msg, #test, "TRUE", NULL, NULL); \
 		} \
 	} while (0)
 
-__attribute__((used)) static inline void
-_scu_assert_function(bool val, bool is_fatal, const char *message, ...)
-{
-	(*_scu_asserts)++;
-	if (!val) {
-		char _scu_fmsg[_SCU_FAILURE_MESSAGE_LENGTH];
-		va_list vargs;
-		va_start(vargs, message);
-		vsnprintf(_scu_fmsg, sizeof(_scu_fmsg), message, vargs);
-		va_end(vargs);
-		SCU_FAIL(_scu_fmsg);
-		if (is_fatal) {
-			_scu_fatal_assert_allowed();
-			_scu_handle_fatal_assert();
-		}
-	}
-}
+#define SCU_ASSERT_WITH_MESSAGE(test, message, ...) _SCU_ASSERT_WITH_MESSAGE(test, true, "SCU_ASSERT_WITH_MESSAGE", message, ##__VA_ARGS__)
+#define SCU_ASSERT_WITH_MESSAGE_FATAL(test, message, ...) _SCU_ASSERT_WITH_MESSAGE(test, true, "SCU_ASSERT_WITH_MESSAGE_FATAL", message, ##__VA_ARGS__)
 
-#define SCU_ASSERT_WITH_MESSAGE(test, message, ...) _scu_assert_function(test, false, ##__VA_ARGS__)
-#define SCU_ASSERT_WITH_MESSAGE_FATAL(test, message, ...) _scu_assert_function(test, true, ##__VA_ARGS__)
-
-#define _SCU_ASSERT(test, is_fatal) \
-	_scu_assert_function((test), is_fatal, "assertion failure: %s", STRINGIFY(test))
-
-#define _SCU_ASSERT_EQUAL_INT(actual, expected, is_fatal) \
-	_scu_assert_function((actual) == (expected), is_fatal, "assertion failure: %d == %d", actual, expected)
-#define _SCU_ASSERT_EQUAL_UNSIGNED_INT(actual, expected, is_fatal) \
-	_scu_assert_function((actual) == (expected), is_fatal, "assertion failure: %u == %u", actual, expected)
-#define _SCU_ASSERT_EQUAL_DOUBLE(actual, expected, is_fatal) \
-	_scu_assert_function((actual) == (expected), is_fatal, "assertion failure: %f == %f", actual, expected)
-#define _SCU_ASSERT_EQUAL_STRING(actual, expected, is_fatal) \
-	_scu_assert_function((actual) == (expected), is_fatal, "assertion failure: %s == %s", actual, expected)
-#define _SCU_ASSERT_EQUAL(actual, expected, is_fatal) \
-	_Generic((expected), \
-	         int \
-	         : _SCU_ASSERT_EQUAL_INT((actual), (expected), is_fatal), \
-	           unsigned int \
-	         : _SCU_ASSERT_EQUAL_UNSIGNED_INT((actual), (expected), is_fatal), \
-	           float \
-	         : _SCU_ASSERT_EQUAL_DOUBLE((actual), (expected), is_fatal), \
-	           double \
-	         : _SCU_ASSERT_EQUAL_DOUBLE((actual), (expected), is_fatal), \
-	           char * \
-	         : _SCU_ASSERT_EQUAL_STRING((actual), (expected), is_fatal), \
-	           const int \
-	         : _SCU_ASSERT_EQUAL_INT((actual), (expected), is_fatal), \
-	           const unsigned int \
-	         : _SCU_ASSERT_EQUAL_UNSIGNED_INT((actual), (expected), is_fatal), \
-	           const float \
-	         : _SCU_ASSERT_EQUAL_DOUBLE((actual), (expected), is_fatal), \
-	           const double \
-	         : _SCU_ASSERT_EQUAL_DOUBLE((actual), (expected), is_fatal), \
-	           const char * \
-	         : _SCU_ASSERT_EQUAL_STRING((actual), (expected), is_fatal), \
-	           default \
-	         : _SCU_ASSERT(actual == expected, is_fatal))
-
-#define SCU_ASSERT(test) _SCU_ASSERT(test, false)
-#define SCU_ASSERT_FATAL(test) _SCU_ASSERT(test, true)
-
-	/* Convenience assertion macros */
-
-#define SCU_ASSERT_TRUE(val) \
-	SCU_ASSERT(val)
-
-#define SCU_ASSERT_FALSE(val) \
-	SCU_ASSERT(!(val))
+#define _SCU_ASSERT(test, is_fatal, assert_method) \
+	do { \
+		_scu_account_assert(is_fatal); \
+		if (!(test)) { \
+			_scu_handle_assert(__FILE__, __LINE__, is_fatal, false, assert_method, "", #test, "TRUE", NULL, NULL); \
+		} \
+	} while (0)
+#define SCU_ASSERT(test) _SCU_ASSERT(test, false, "SCU_ASSERT")
+#define SCU_ASSERT_FATAL(test) _SCU_ASSERT(test, true, "SCU_ASSERT_FATAL")
 
 #define SCU_ASSERT_EQUAL(actual, expected) \
-	_SCU_ASSERT_EQUAL(actual, expected, false)
+	do { \
+		_scu_account_assert(false); \
+		_scu_handle_assert(__FILE__, __LINE__, (actual) == (expected), false, "SCU_ASSERT_EQUAL", NULL, #actual, #expected, NULL, NULL); \
+	} while (0)
+
+#define SCU_ASSERT_INT_EQUAL(actual, expected) \
+	do { \
+		_scu_account_assert(false); \
+		_scu_handle_assert_int(__FILE__, __LINE__, (actual), (expected), false, false, "SCU_ASSERT_INT_EQUAL", #actual, #expected); \
+	} while (0)
+
+#define SCU_ASSERT_INT_NOT_EQUAL(actual, expected) \
+	do { \
+		_scu_account_assert(false); \
+		_scu_handle_assert_int(__FILE__, __LINE__, (actual), (expected), false, true, "SCU_ASSERT_INT_NOT_EQUAL", #actual, #expected); \
+	} while (0)
 
 #define SCU_ASSERT_NOT_EQUAL(actual, expected) \
-	SCU_ASSERT((actual) != (expected))
+	do { \
+		_scu_account_assert(false); \
+		_scu_handle_assert(__FILE__, __LINE__, (actual) != (expected), false, "SCU_ASSERT_NOT_EQUAL", NULL, #actual, #expected, NULL, NULL); \
+	} while (0)
 
 #define SCU_ASSERT_MEM_EQUAL(actual, expected, size) \
-	SCU_ASSERT(memcmp(actual, expected, size) == 0)
+	do { \
+		_scu_account_assert(false); \
+		_scu_handle_assert(__FILE__, __LINE__, (memcmp(actual, expected, size) == 0), false, "SCU_ASSERT_MEM_EQUAL", NULL, #actual, #expected, NULL, NULL); \
+	} while (0)
 
 #define SCU_ASSERT_PTR_NULL(ptr) \
-	SCU_ASSERT((ptr) == NULL)
+	do { \
+		_scu_account_assert(false); \
+		_scu_handle_assert_ptr(__FILE__, __LINE__, (ptr), NULL, false, false, "SCU_ASSERT_PTR_NULL", #ptr, NULL); \
+	} while (0)
 
 #define SCU_ASSERT_PTR_NOT_NULL(ptr) \
-	SCU_ASSERT((ptr) != NULL)
+	do { \
+		_scu_account_assert(false); \
+		_scu_handle_assert_ptr(__FILE__, __LINE__, (ptr), NULL, false, true, "SCU_ASSERT_PTR_NOT_NULL", #ptr, NULL); \
+	} while (0)
 
 #define SCU_ASSERT_PTR_EQUAL(actual, expected) \
-	SCU_ASSERT((actual) == (expected))
+	do { \
+		_scu_account_assert(false); \
+		_scu_handle_assert_ptr(__FILE__, __LINE__, (actual), (expected), false, false, "SCU_ASSERT_PTR_EQUAL", #actual, #expected); \
+	} while (0)
 
 #define SCU_ASSERT_PTR_NOT_EQUAL(actual, expected) \
-	SCU_ASSERT((actual) != (expected))
+	do { \
+		_scu_account_assert(false); \
+		_scu_handle_assert_ptr(__FILE__, __LINE__, (actual), (expected), false, true, "SCU_ASSERT_PTR_NOT_EQUAL", #actual, #expected); \
+	} while (0)
 
 #define SCU_ASSERT_STRING_EQUAL(actual, expected) \
-	SCU_ASSERT(strcmp(actual, expected) == 0)
+	do { \
+		_scu_account_assert(false); \
+		_scu_handle_assert_nstr(__FILE__, __LINE__, (actual), (expected), -1, false, false, "SCU_ASSERT_STRING_EQUAL", #actual, #expected); \
+	} while (0)
 
 #define SCU_ASSERT_NSTRING_EQUAL(actual, expected, size) \
-	SCU_ASSERT(strncmp(actual, expected, size) == 0)
+	do { \
+		_scu_account_assert(false); \
+		_scu_handle_assert_nstr(__FILE__, __LINE__, (actual), (expected), size, false, false, "SCU_ASSERT_NSTRING_EQUAL", #actual, #expected); \
+	} while (0)
 
+/* todo */
 #define SCU_ASSERT_TRUE_FATAL(val) \
 	SCU_ASSERT_FATAL(val)
 
 #define SCU_ASSERT_FALSE_FATAL(val) \
 	SCU_ASSERT_FATAL(!(val))
-
-#define SCU_ASSERT_EQUAL_FATAL(actual, expected) \
-	_SCU_ASSERT_EQUAL(actual, expected, true)
 
 #define SCU_ASSERT_NOT_EQUAL_FATAL(actual, expected) \
 	SCU_ASSERT_FATAL((actual) != (expected))

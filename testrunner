@@ -280,11 +280,25 @@ class TestEmitter(Observer):
             )
             if not success:
                 for failure in event['failures']:
-                    print("           * " + failure['message'])
-                    print("             @ {file}:{line}".format(**failure))
+                    if 'lhs' in failure:
+                        if failure['message']:
+                            print("           * " + failure['message'])
+                        if 'rhs' in failure:
+                            print("           * {assert_method}({lhs}, {rhs})".format(**failure))
+                        else:
+                            print("           * {assert_method}({lhs})".format(**failure))
+                        if 'lhs_value' in failure and 'rhs_value' in failure:
+                            print("           * actual: {lhs_value}, expected: {rhs_value}".format(**failure))
+                        elif 'lhs_value' in failure:
+                            print("           * actual: {lhs_value}".format(**failure))
+                    elif failure['message']:
+                        print("           * {assert_method}({message})".format(**failure))
+                    else:
+                        print("           * {assert_method}".format(**failure))
+                    print("           @ {file}:{line}".format(**failure))
         elif event_type == 'testcase_error':
             print('')
-            print("           ! " + event['message'])
+            print("           ! {colors.RED}{event[message]}{colors.DEFAULT}".format(event=event, colors=Colors))
         if not success:
             with open(test.output_file_path) as f:
                 for line in f:

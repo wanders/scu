@@ -134,27 +134,49 @@ SCU_TEST(tags, "Test with tags", SCU_TAGS("tag1", "tag2"))
 SCU_TEST(assert_equal_int, "Assert equal pretty printing - integer")
 {
 	int x = 1;
-	int y = 2;
-	SCU_ASSERT_EQUAL(x, y);
+	SCU_ASSERT_INT_EQUAL(x, 2);
+}
+
+SCU_TEST(assert_equal_int_macro, "Assert equal pretty printing - integer - MACRO")
+{
+#define THE_MAGIC_NUMBER 42
+	int x = 1;
+	SCU_ASSERT_INT_EQUAL(x, THE_MAGIC_NUMBER);
 }
 
 SCU_TEST(assert_equal_unsigned_int, "Assert equal pretty printing - unsigned integer")
 {
 	unsigned int x = -1;
-	unsigned int y = -2;
-	SCU_ASSERT_EQUAL(x, y);
+	SCU_ASSERT_INT_EQUAL(x, -1);
 }
 
 SCU_TEST(assert_equal_double, "Assert equal pretty printing - double")
 {
 	double x = 1.5;
-	double y = 2.5;
-	SCU_ASSERT_EQUAL(x, y);
+	SCU_ASSERT_EQUAL(x, 2.5);
 }
 
 SCU_TEST(assert_equal_string, "Assert equal pretty printing - string")
 {
 	const char *x = "foo";
-	const char *y = "bar";
-	SCU_ASSERT_EQUAL(x, y);
+	SCU_ASSERT_STRING_EQUAL(x, "bar");
+}
+
+SCU_TEST(assert_equal_string_with_strange_chars, "Assert equal pretty printing - string with strange chars")
+{
+#define MAGIC_VALUE "bar\xff"
+	const char *x = "foo\n";
+	SCU_ASSERT_STRING_EQUAL(x, MAGIC_VALUE);
+}
+
+SCU_TEST(assert_ptr_null, "Assert ptr null")
+{
+	const char *x = "foo";
+	SCU_ASSERT_PTR_NULL(x);
+}
+
+SCU_TEST(assert_ptr_not_null, "Assert ptr not null")
+{
+	const char *x = NULL;
+	SCU_ASSERT_PTR_NOT_NULL(x);
 }
