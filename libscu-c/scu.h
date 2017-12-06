@@ -123,8 +123,8 @@ void _scu_fatal_assert_allowed(void);
 		} \
 	} while (0)
 
-#define SCU_ASSERT_WITH_MESSAGE(test, message, ...) _SCU_ASSERT_WITH_MESSAGE(test, false, ##__VA_ARGS__)
-#define SCU_ASSERT_WITH_MESSAGE_FATAL(test, message, ...) _SCU_ASSERT_WITH_MESSAGE(test, true, ##__VA_ARGS__)
+#define SCU_ASSERT_WITH_MESSAGE(test, message, ...) _SCU_ASSERT_WITH_MESSAGE(test, false, message, ##__VA_ARGS__)
+#define SCU_ASSERT_WITH_MESSAGE_FATAL(test, message, ...) _SCU_ASSERT_WITH_MESSAGE(test, true, message, ##__VA_ARGS__)
 
 #define _SCU_ASSERT(test, is_fatal) \
 	do { \
