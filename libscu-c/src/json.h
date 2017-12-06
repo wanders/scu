@@ -29,8 +29,15 @@ json_escape_string(char *out, const char *in)
 {
 	size_t out_i = 0;
 	for (size_t in_i = 0; (in[in_i] != 0) && (in_i < _SCU_JSON_STRING_LENGTH - 1); in_i++) {
-		if (in[in_i] == _SCU_ASCII_BACKSLASH || in[in_i] == _SCU_ASCII_DOUBLE_QUOTE)
+		if (in[in_i] == _SCU_ASCII_BACKSLASH || in[in_i] == _SCU_ASCII_DOUBLE_QUOTE) {
 			out[out_i++] = _SCU_ASCII_BACKSLASH;
+		} else if (in[in_i] == '\n') {
+			out[out_i++] = _SCU_ASCII_BACKSLASH;
+			/* XXX possible buffer overflow */
+			/* also might need to escape more chars */
+			out[out_i++] = 'n';
+			continue;
+		}
 		out[out_i++] = in[in_i];
 	}
 	out[out_i] = 0;
