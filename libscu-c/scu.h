@@ -222,7 +222,7 @@ _scu_handle_assert_nstr(const char *file, int line, const char *actual, const ch
 	do { \
 		_scu_account_assert(is_fatal); \
 		if (!(test)) { \
-			_scu_handle_assert(__FILE__, __LINE__, is_fatal, false, assert_method, "", #test, "TRUE", NULL, NULL); \
+			_scu_handle_assert(__FILE__, __LINE__, is_fatal, false, assert_method, "", #test, NULL, NULL, NULL); \
 		} \
 	} while (0)
 #define SCU_ASSERT(test) _SCU_ASSERT(test, false, "SCU_ASSERT")
