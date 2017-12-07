@@ -147,7 +147,8 @@ SCU_TEST(assert_equal_int_macro, "Assert equal pretty printing - integer - MACRO
 SCU_TEST(assert_equal_unsigned_int, "Assert equal pretty printing - unsigned integer")
 {
 	unsigned int x = -1;
-	SCU_ASSERT_INT_EQUAL(x, -1);
+	SCU_ASSERT(x == -1);
+	SCU_ASSERT_INT_EQUAL(x, -2);
 }
 
 SCU_TEST(assert_equal_double, "Assert equal pretty printing - double")

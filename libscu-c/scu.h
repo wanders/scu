@@ -114,12 +114,18 @@ _scu_handle_assert(const char *file, int line, bool cond, bool is_fatal, const c
 }
 
 static inline void
-_scu_prettyprint_numeric_value(char *buf, size_t bufsiz, unsigned long long value)
+_scu_prettyprint_numeric_value(char *buf, size_t bufsiz, unsigned long long value, size_t bitlen)
 {
-	if (value & 1LLU << 63) {
-		snprintf(buf, bufsiz, "%llu (0x%llx == %lld)", value, value, value);
+	unsigned long long mask;
+	if (bitlen == 64) {
+		mask = 0xffffffffffffffff;
 	} else {
-		snprintf(buf, bufsiz, "%llu (0x%llx)", value, value);
+		mask = (1ULL << (bitlen * 8)) - 1;
+	}
+	if (value & 1LLU << ((bitlen * 8) - 1)) {
+		snprintf(buf, bufsiz, "%llu (0x%llx == %lld)", value & mask, value & mask, value | ~mask);
+	} else {
+		snprintf(buf, bufsiz, "%llu (0x%llx)", value & mask, value & mask);
 	}
 }
 
@@ -134,13 +140,13 @@ _scu_prettyprint_pointer_value(char *buf, size_t bufsiz, const void *value)
 }
 
 static inline void
-_scu_handle_assert_int(const char *file, int line, unsigned long long actual, unsigned long long expected, bool is_fatal, bool inverse, const char *assert_method, const char *actual_str, const char *expected_str)
+_scu_handle_assert_int(const char *file, int line, bool condition, unsigned long long actual, size_t actual_bitlen, unsigned long long expected, size_t expected_bitlen, bool is_fatal, bool inverse, const char *assert_method, const char *actual_str, const char *expected_str)
 {
-	if ((actual != expected) ^ inverse) {
+	if ((!condition) ^ inverse) {
 		char actual_value[64];
 		char expected_value[64];
-		_scu_prettyprint_numeric_value(actual_value, sizeof(actual_value), actual);
-		_scu_prettyprint_numeric_value(expected_value, sizeof(expected_value), expected);
+		_scu_prettyprint_numeric_value(actual_value, sizeof(actual_value), actual, actual_bitlen);
+		_scu_prettyprint_numeric_value(expected_value, sizeof(expected_value), expected, expected_bitlen);
 		_scu_handle_assert(file, line, false, is_fatal, assert_method, NULL, actual_str, expected_str, actual_value, expected_value);
 	}
 }
@@ -236,8 +242,10 @@ _scu_handle_assert_nstr(const char *file, int line, const char *actual, const ch
 
 #define SCU_ASSERT_INT_EQUAL(actual, expected) \
 	do { \
+		typeof(actual) _a = (actual); \
+		typeof(expected) _e = (expected); \
 		_scu_account_assert(false); \
-		_scu_handle_assert_int(__FILE__, __LINE__, (actual), (expected), false, false, "SCU_ASSERT_INT_EQUAL", #actual, #expected); \
+		_scu_handle_assert_int(__FILE__, __LINE__, _a == _e, _a, sizeof (_a), _e, sizeof(_e), false, false, "SCU_ASSERT_INT_EQUAL", #actual, #expected); \
 	} while (0)
 
 #define SCU_ASSERT_INT_NOT_EQUAL(actual, expected) \
