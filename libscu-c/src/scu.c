@@ -196,26 +196,33 @@ _scu_output_test_failure(int fd, _scu_failure *failure)
 	json_separator(fd);
 	json_object_key(fd, "assert_method");
 	json_string(fd, failure->assert_method);
+	json_separator(fd);
+	json_object_key(fd, "assert_method_values");
+	json_array_start(fd);
 	if (failure->lhs[0]) {
-		json_separator(fd);
-		json_object_key(fd, "lhs");
+		json_object_start(fd);
+		json_object_key(fd, "name");
 		json_string(fd, failure->lhs);
+		if (failure->lhs_value[0]) {
+			json_separator(fd);
+			json_object_key(fd, "value");
+			json_string(fd, failure->lhs_value);
+		}
+		json_object_end(fd);
+		if (failure->rhs[0]) {
+			json_separator(fd);
+			json_object_start(fd);
+			json_object_key(fd, "name");
+			json_string(fd, failure->rhs);
+			if (failure->rhs_value[0]) {
+				json_separator(fd);
+				json_object_key(fd, "value");
+				json_string(fd, failure->rhs_value);
+			}
+			json_object_end(fd);
+		}
 	}
-	if (failure->rhs[0]) {
-		json_separator(fd);
-		json_object_key(fd, "rhs");
-		json_string(fd, failure->rhs);
-	}
-	if (failure->lhs_value[0]) {
-		json_separator(fd);
-		json_object_key(fd, "lhs_value");
-		json_string(fd, failure->lhs_value);
-	}
-	if (failure->rhs_value[0]) {
-		json_separator(fd);
-		json_object_key(fd, "rhs_value");
-		json_string(fd, failure->rhs_value);
-	}
+	json_array_end(fd);
 	json_object_end(fd);
 }
 

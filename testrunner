@@ -247,6 +247,24 @@ class TestModuleCollector(Observer):
         module.tests.append(TestCase(**event))
 
 
+def pretty_assert_method(assert_method, value_names, values):
+    offsets = [len(assert_method) + 1]
+    for v in value_names:
+        offsets.append(offsets[-1] + len(v) + 2)
+
+    yield Colors.RED + assert_method + Colors.DEFAULT + "(" + ", ".join(value_names) + ")"
+    if values:
+        destlen = offsets[-1] + 5
+        line = [' '] * destlen
+        for o in offsets[:len(values)]:
+            line[o] = '|'
+        yield "".join(line).rstrip()
+        for i, v in reversed(list(enumerate(values))):
+            line[offsets[i]] = '+'
+            line[offsets[i] + 1:] = ['-'] * (destlen - offsets[i] + 1)
+            yield "".join(line) + " " + v
+
+
 class TestEmitter(Observer):
 
     def __init__(self):
@@ -280,21 +298,18 @@ class TestEmitter(Observer):
             )
             if not success:
                 for failure in event['failures']:
-                    if 'lhs' in failure:
-                        if failure['message']:
-                            print("           * " + failure['message'])
-                        if 'rhs' in failure:
-                            print("           * {assert_method}({lhs}, {rhs})".format(**failure))
+                    value_names = [v['name'] for v in failure['assert_method_values']]
+                    values = [v['value'] for v in failure['assert_method_values'] if 'value' in v]
+
+                    if failure['message']:
+                        if not value_names:
+                            value_names = [failure['message']]
                         else:
-                            print("           * {assert_method}({lhs})".format(**failure))
-                        if 'lhs_value' in failure and 'rhs_value' in failure:
-                            print("           * actual: {lhs_value}, expected: {rhs_value}".format(**failure))
-                        elif 'lhs_value' in failure:
-                            print("           * actual: {lhs_value}".format(**failure))
-                    elif failure['message']:
-                        print("           * {assert_method}({message})".format(**failure))
-                    else:
-                        print("           * {assert_method}".format(**failure))
+                            print("           * " + failure['message'])
+
+                    for l in pretty_assert_method(failure['assert_method'], value_names, values):
+                        print("           * " + l)
+
                     print("           @ {file}:{line}".format(**failure))
         elif event_type == 'testcase_error':
             print('')
