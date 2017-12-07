@@ -147,14 +147,62 @@ SCU_TEST(assert_equal_int_macro, "Assert equal pretty printing - integer - MACRO
 SCU_TEST(assert_equal_unsigned_int, "Assert equal pretty printing - unsigned integer")
 {
 	unsigned int x = -1;
+	/* these two should have same behavior (both pass) */
 	SCU_ASSERT(x == -1);
+	SCU_ASSERT_INT_EQUAL(x, -1);
+
+	/* fails */
 	SCU_ASSERT_INT_EQUAL(x, -2);
 }
 
-SCU_TEST(assert_equal_double, "Assert equal pretty printing - double")
+SCU_TEST(assert_equal_unsigned_int_different_types, "Assert equal pretty printing - unsigned integer of different length")
 {
-	double x = 1.5;
-	SCU_ASSERT_EQUAL(x, 2.5);
+	unsigned char minus_one_char = -1;
+	unsigned short minus_one_short = -1;
+	unsigned int minus_one_int = -1;
+	unsigned long minus_one_long = -1;
+	unsigned long long minus_one_long_long = -1;
+
+	SCU_ASSERT(minus_one_char == -1);
+	SCU_ASSERT_INT_EQUAL(minus_one_char, -1);
+	SCU_ASSERT_INT_EQUAL(minus_one_char, -2);
+	SCU_ASSERT(minus_one_short == -1);
+	SCU_ASSERT_INT_EQUAL(minus_one_short, -1);
+	SCU_ASSERT_INT_EQUAL(minus_one_short, -2);
+	SCU_ASSERT(minus_one_int == -1);
+	SCU_ASSERT_INT_EQUAL(minus_one_int, -1);
+	SCU_ASSERT_INT_EQUAL(minus_one_int, -2);
+	SCU_ASSERT(minus_one_long == -1);
+	SCU_ASSERT_INT_EQUAL(minus_one_long, -1);
+	SCU_ASSERT_INT_EQUAL(minus_one_long, -2);
+	SCU_ASSERT(minus_one_long_long == -1);
+	SCU_ASSERT_INT_EQUAL(minus_one_long_long, -1);
+	SCU_ASSERT_INT_EQUAL(minus_one_long_long, -2);
+}
+
+SCU_TEST(assert_equal_signed_int_different_types, "Assert equal pretty printing - signed integer of different length")
+{
+	signed char minus_one_char = -1;
+	signed short minus_one_short = -1;
+	signed int minus_one_int = -1;
+	signed long minus_one_long = -1;
+	signed long long minus_one_long_long = -1;
+
+	SCU_ASSERT(minus_one_char == -1);
+	SCU_ASSERT_INT_EQUAL(minus_one_char, -1);
+	SCU_ASSERT_INT_EQUAL(minus_one_char, -2);
+	SCU_ASSERT(minus_one_short == -1);
+	SCU_ASSERT_INT_EQUAL(minus_one_short, -1);
+	SCU_ASSERT_INT_EQUAL(minus_one_short, -2);
+	SCU_ASSERT(minus_one_int == -1);
+	SCU_ASSERT_INT_EQUAL(minus_one_int, -1);
+	SCU_ASSERT_INT_EQUAL(minus_one_int, -2);
+	SCU_ASSERT(minus_one_long == -1);
+	SCU_ASSERT_INT_EQUAL(minus_one_long, -1);
+	SCU_ASSERT_INT_EQUAL(minus_one_long, -2);
+	SCU_ASSERT(minus_one_long_long == -1);
+	SCU_ASSERT_INT_EQUAL(minus_one_long_long, -1);
+	SCU_ASSERT_INT_EQUAL(minus_one_long_long, -2);
 }
 
 SCU_TEST(assert_equal_string, "Assert equal pretty printing - string")
