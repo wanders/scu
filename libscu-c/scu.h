@@ -242,10 +242,11 @@ _scu_handle_assert_nstr(const char *file, int line, const char *actual, const ch
 
 #define SCU_ASSERT_INT_EQUAL(actual, expected) \
 	do { \
-		typeof(actual) _a = (actual); \
-		typeof(expected) _e = (expected); \
+		/* store to temporaries to ensure arguments only are evaluated once */ \
+		typeof(actual) _scu_temp_actual = (actual); \
+		typeof(expected) _scu_temp_expected = (expected); \
 		_scu_account_assert(false); \
-		_scu_handle_assert_int(__FILE__, __LINE__, _a == _e, _a, sizeof (_a), _e, sizeof(_e), false, false, "SCU_ASSERT_INT_EQUAL", #actual, #expected); \
+		_scu_handle_assert_int(__FILE__, __LINE__, _scu_temp_actual == _scu_temp_expected, _scu_temp_actual, sizeof (_scu_temp_actual), _scu_temp_expected, sizeof(_scu_temp_expected), false, false, "SCU_ASSERT_INT_EQUAL", #actual, #expected); \
 	} while (0)
 
 #define SCU_ASSERT_INT_NOT_EQUAL(actual, expected) \
