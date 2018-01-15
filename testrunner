@@ -50,19 +50,11 @@ class TestModule:
         args = [os.path.abspath(self.module_path), '--list']
         self.proc = Popen(args, stdout=PIPE)
 
-    def run(self, test_indices, valgrind):
+    def run(self, test_indices, wrapper):
         args = []
-        if valgrind:
-            log_path = "valgrind.{}.log".format(os.path.basename(self.module_path))
-            print("VALGRIND MODE ENABLED")
-            print()
-            print("The test process will be run under Valgrind. Any errors found will be logged to:")
-            print()
-            print("\t{}".format(log_path))
-            print()
-            args.extend(['valgrind', '--quiet', "--log-file={}".format(log_path)])
         args.extend([os.path.abspath(self.module_path), '--run'])
         args.extend(map(str, test_indices))
+        args = wrapper.get_args(args)
         self.proc = Popen(args, stdout=PIPE)
         flags = fcntl(self.fileno(), F_GETFL)
         fcntl(self.fileno(), F_SETFL, flags | os.O_NONBLOCK)
@@ -202,7 +194,7 @@ class Runner(EventEmitter):
             job = self.handle_events(running_jobs)
             running_jobs.remove(job)
 
-    def run_modules(self, tests_to_run, debug=False, valgrind=False):
+    def run_modules(self, tests_to_run, wrapperclass, debug=False):
         self.reset_modules()
         if debug:
             os.putenv('SCU_WAIT_FOR_DEBUGGER', '1')
@@ -211,9 +203,11 @@ class Runner(EventEmitter):
         while pending_jobs or running_jobs:
             while len(running_jobs) < self.simultaneous_jobs and pending_jobs:
                 job, indices = pending_jobs.pop()
-                job.run(indices, valgrind)
+                wrapper = wrapperclass(job)
+                job.run(indices, wrapper)
                 self.emit(job, {
                     'event': 'module_start',
+                    'message': wrapper.get_message(),
                 })
                 if debug:
                     job.print_debug_help()
@@ -262,6 +256,8 @@ class TestEmitter(Observer):
 
     def handle_module_start(self, module, event):
         print("  {name}".format(name=module.name))
+        for l in event['message']:
+            print("    > {}".format(l))
 
     def handle_testcase_start(self, module, event):
         self.current_test = module.tests[event['index']]
@@ -431,6 +427,32 @@ class FilterAction(Action):
         namespace.exclude = False
 
 
+class Wrapper(object):
+    def __init__(self, module):
+        self.module = module
+
+    def get_args(self, args):
+        return args
+
+    def get_message(self):
+        return []
+
+
+class Valgrind(Wrapper):
+    log_path = property(lambda self:
+                        "valgrind.{}.log".format(os.path.basename(self.module.module_path)))
+
+    def get_args(self, args):
+        return ['valgrind', "--log-file={}".format(self.log_path)] + args
+
+    def get_message(self):
+        return ["VALGRIND MODE ENABLED",
+                "",
+                "The test process will be run under Valgrind. Any errors found will be logged to:",
+                "\t{}".format(self.log_path),
+                ""]
+
+
 if __name__ == '__main__':
     # Parse arguments
     parser = ArgumentParser(description="Runs SCU test modules")
@@ -478,8 +500,13 @@ if __name__ == '__main__':
     runner.register(buffered_emitter)
     runner.register(summary_emitter)
 
+    if args.valgrind:
+        wrapperclass = Valgrind
+    else:
+        wrapperclass = Wrapper
+
     # Run selected tests
-    runner.run_modules(tests_to_run, debug=args.gdb, valgrind=args.valgrind)
+    runner.run_modules(tests_to_run, wrapperclass, debug=args.gdb)
 
     # Print summary
     summary_emitter.print_summary()
