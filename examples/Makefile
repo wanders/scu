@@ -1,4 +1,4 @@
-TESTCASES:=file framework crash
+TESTCASES:=file framework crash crash-at-shutdown
 
 CFLAGS=-Wall -Werror -std=gnu11 -g
 

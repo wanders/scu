@@ -98,29 +98,6 @@ _scu_output_test_list(int line, const char *name, const char *description, const
 }
 
 static void
-_scu_output_module_start(const char *modulename)
-{
-	json_object_start(_scu_cmd_fd);
-	json_object_key(_scu_cmd_fd, "event");
-	json_string(_scu_cmd_fd, "module_start");
-	json_separator(_scu_cmd_fd);
-	json_object_key(_scu_cmd_fd, "name");
-	json_string(_scu_cmd_fd, modulename);
-	json_object_end(_scu_cmd_fd);
-	_scu_flush_json(_scu_cmd_fd);
-}
-
-static void
-_scu_output_module_end()
-{
-	json_object_start(_scu_cmd_fd);
-	json_object_key(_scu_cmd_fd, "event");
-	json_string(_scu_cmd_fd, "module_end");
-	json_object_end(_scu_cmd_fd);
-	_scu_flush_json(_scu_cmd_fd);
-}
-
-static void
 _scu_output_setup_start(const char *filename)
 {
 	json_object_start(_scu_cmd_fd);
@@ -388,8 +365,6 @@ run_tests(size_t num_tests, long int test_indices[])
 		pause();
 	}
 
-	_scu_output_module_start(_scu_module_name);
-
 	char filename[SCU_OUTPUT_FILENAME_TEMPLATE_SIZE];
 
 	_scu_redirect_output(filename, sizeof(filename));
@@ -411,8 +386,6 @@ run_tests(size_t num_tests, long int test_indices[])
 	_scu_teardown();
 
 	_scu_output_teardown_end();
-
-	_scu_output_module_end();
 }
 
 /* Argument parsing */
