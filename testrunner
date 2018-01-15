@@ -95,20 +95,6 @@ class TestModule:
     def read(self, size):
         return self.proc.stdout.read(size)
 
-    def print_debug_help(self):
-        print("DEBUG MODE ENABLED")
-        print()
-        print("The test process will stop and wait for SIGCONT. Run the following command to")
-        print("attach with gdb:")
-        print()
-        print("\tgdb {} {}".format(self.module_path, self.proc.pid))
-        print()
-        print("After attaching to the process with gdb, you can set breakpoints before")
-        print("resuming the process by sending SIGCONT:")
-        print()
-        print("\t(gdb) signal SIGCONT")
-        print()
-
 
 class Observer:
 
@@ -194,10 +180,8 @@ class Runner(EventEmitter):
             job = self.handle_events(running_jobs)
             running_jobs.remove(job)
 
-    def run_modules(self, tests_to_run, wrapperclass, debug=False):
+    def run_modules(self, tests_to_run, wrapperclass):
         self.reset_modules()
-        if debug:
-            os.putenv('SCU_WAIT_FOR_DEBUGGER', '1')
         pending_jobs = tests_to_run[:]
         running_jobs = []
         while pending_jobs or running_jobs:
@@ -209,8 +193,6 @@ class Runner(EventEmitter):
                     'event': 'module_start',
                     'message': wrapper.get_message(),
                 })
-                if debug:
-                    job.print_debug_help()
                 running_jobs.append(job)
             job = self.handle_events(running_jobs)
             running_jobs.remove(job)
@@ -453,6 +435,23 @@ class Valgrind(Wrapper):
                 ""]
 
 
+class GDBServer(Wrapper):
+    comm = property(lambda self:
+                    os.getenv('SCU_GDBSERVER_COMM', '127.0.0.1:9999'))
+
+    def get_args(self, args):
+        return ['gdbserver', self.comm] + args
+
+    def get_message(self):
+        return ["DEBUG MODE ENABLED",
+                "",
+                "The test process will be run under gdbserver",
+                "To attach to it run the following command in gdb:",
+                " (gdb) target remote {}".format(self.comm),
+                "Then to start it:",
+                " (gdb) continue"]
+
+
 if __name__ == '__main__':
     # Parse arguments
     parser = ArgumentParser(description="Runs SCU test modules")
@@ -500,13 +499,16 @@ if __name__ == '__main__':
     runner.register(buffered_emitter)
     runner.register(summary_emitter)
 
-    if args.valgrind:
+    if args.gdb:
+        wrapperclass = GDBServer
+        runner.simultaneous_jobs = 1
+    elif args.valgrind:
         wrapperclass = Valgrind
     else:
         wrapperclass = Wrapper
 
     # Run selected tests
-    runner.run_modules(tests_to_run, wrapperclass, debug=args.gdb)
+    runner.run_modules(tests_to_run, wrapperclass)
 
     # Print summary
     summary_emitter.print_summary()

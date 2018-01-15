@@ -350,20 +350,9 @@ _scu_run_test(int idx)
 }
 
 static void
-_scu_sigcont_handler(int sig)
-{
-}
-
-static void
 run_tests(size_t num_tests, long int test_indices[])
 {
 	_scu_cmd_fd = dup(STDOUT_FILENO);
-
-	if (getenv("SCU_WAIT_FOR_DEBUGGER")) {
-		/* We use an empty signal handler to wait for SIGCONT with pause() */
-		signal(SIGCONT, _scu_sigcont_handler);
-		pause();
-	}
 
 	char filename[SCU_OUTPUT_FILENAME_TEMPLATE_SIZE];
 
