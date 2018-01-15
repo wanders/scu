@@ -389,18 +389,33 @@ class TestCleaner(Observer):
         self.output_file_path = None
 
     def handle_testcase_start(self, module, event):
+        assert self.output_file_path is None
         self.output_file_path = event['output']
 
     def handle_testcase_end(self, module, event):
-        self.clean_testcase()
+        self.clean_output()
 
     def handle_module_crash(self, module, event):
-        self.clean_testcase()
+        self.clean_output()
 
     def handle_testcase_error(self, module, event):
-        self.clean_testcase()
+        self.clean_output()
 
-    def clean_testcase(self):
+    def handle_setup_start(self, module, event):
+        assert self.output_file_path is None
+        self.output_file_path = event['output']
+
+    def handle_setup_end(self, module, event):
+        self.clean_output()
+
+    def handle_teardown_start(self, module, event):
+        assert self.output_file_path is None
+        self.output_file_path = event['output']
+
+    def handle_teardown_end(self, module, event):
+        self.clean_output()
+
+    def clean_output(self):
         if self.output_file_path:
             os.unlink(self.output_file_path)
             self.output_file_path = None
