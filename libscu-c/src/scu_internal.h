@@ -41,7 +41,7 @@ void _scu_account_assert(bool is_fatal);
 void _scu_handle_fatal_assert(void) __attribute__((noreturn));
 _scu_failure *_scu_report_failure(const char *file, int line, const char *assert_method);
 
-/* Test module internals */
+/* Internal functions */
 
 static inline void
 _scu_handle_assert(const char *file, int line, bool cond, bool is_fatal, const char *assert_method, const char *msg, const char *actual, const char *expected, const char *actual_value, const char *expected_value)
@@ -112,21 +112,26 @@ _scu_handle_assert_nstr(const char *file, int line, const char *actual, const ch
 	}
 }
 
-#define _SCU_ASSERT_WITH_MESSAGE(test, is_fatal, assert_method, message, ...) \
+/* Internal assertion macros */
+
+#define _SCU_HANDLE_ASSERT(cond, is_fatal, assert_method, msg, actual, expected, actual_value, expected_value) \
+	_scu_handle_assert(__FILE__, __LINE__, cond, is_fatal, assert_method, msg, actual, expected, actual_value, expected_value)
+
+#define _SCU_ASSERT_WITH_MESSAGE(cond, is_fatal, assert_method, message, ...) \
 	do { \
 		_scu_account_assert(is_fatal); \
-		if (!(test)) { \
+		if (!(cond)) { \
 			char _scu_assert_msg[1024]; \
 			snprintf(_scu_assert_msg, sizeof(_scu_assert_msg), message, ##__VA_ARGS__); \
-			_scu_handle_assert(__FILE__, __LINE__, is_fatal, false, assert_method, _scu_assert_msg, #test, "TRUE", NULL, NULL); \
+			_SCU_HANDLE_ASSERT(cond, is_fatal, assert_method, _scu_assert_msg, #cond, "TRUE", NULL, NULL); \
 		} \
 	} while (0)
 
-#define _SCU_ASSERT(test, is_fatal, assert_method) \
+#define _SCU_ASSERT(cond, is_fatal, assert_method) \
 	do { \
 		_scu_account_assert(is_fatal); \
-		if (!(test)) { \
-			_scu_handle_assert(__FILE__, __LINE__, is_fatal, false, assert_method, "", #test, NULL, NULL, NULL); \
+		if (!(cond)) { \
+			_SCU_HANDLE_ASSERT(cond, is_fatal, assert_method, "", #cond, "TRUE", NULL, NULL); \
 		} \
 	} while (0)
 

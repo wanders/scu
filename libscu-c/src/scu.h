@@ -42,20 +42,20 @@ extern "C" {
 /* Assertion macros */
 
 #define SCU_FAIL(message) \
-	_scu_handle_assert(__FILE__, __LINE__, false, false, "SCU_FAIL", message, NULL, NULL, NULL, NULL);
+	_SCU_HANDLE_ASSERT(false, false, "SCU_FAIL", message, NULL, NULL, NULL, NULL);
 #define SCU_FATAL(message) \
-	_scu_handle_assert(__FILE__, __LINE__, true, false, "SCU_FATAL", message, NULL, NULL, NULL, NULL);
+	_SCU_HANDLE_ASSERT(false, true, "SCU_FATAL", message, NULL, NULL, NULL, NULL);
 
-#define SCU_ASSERT_WITH_MESSAGE(test, message, ...) _SCU_ASSERT_WITH_MESSAGE(test, true, "SCU_ASSERT_WITH_MESSAGE", message, ##__VA_ARGS__)
-#define SCU_ASSERT_WITH_MESSAGE_FATAL(test, message, ...) _SCU_ASSERT_WITH_MESSAGE(test, true, "SCU_ASSERT_WITH_MESSAGE_FATAL", message, ##__VA_ARGS__)
+#define SCU_ASSERT_WITH_MESSAGE(cond, message, ...) _SCU_ASSERT_WITH_MESSAGE(cond, false, "SCU_ASSERT_WITH_MESSAGE", message, ##__VA_ARGS__)
+#define SCU_ASSERT_WITH_MESSAGE_FATAL(cond, message, ...) _SCU_ASSERT_WITH_MESSAGE(cond, true, "SCU_ASSERT_WITH_MESSAGE_FATAL", message, ##__VA_ARGS__)
 
-#define SCU_ASSERT(test) _SCU_ASSERT(test, false, "SCU_ASSERT")
-#define SCU_ASSERT_FATAL(test) _SCU_ASSERT(test, true, "SCU_ASSERT_FATAL")
+#define SCU_ASSERT(cond) _SCU_ASSERT(cond, false, "SCU_ASSERT")
+#define SCU_ASSERT_FATAL(cond) _SCU_ASSERT(cond, true, "SCU_ASSERT_FATAL")
 
 #define SCU_ASSERT_EQUAL(actual, expected) \
 	do { \
 		_scu_account_assert(false); \
-		_scu_handle_assert(__FILE__, __LINE__, (actual) == (expected), false, "SCU_ASSERT_EQUAL", NULL, #actual, #expected, NULL, NULL); \
+		_SCU_HANDLE_ASSERT((actual) == (expected), false, "SCU_ASSERT_EQUAL", NULL, #actual, #expected, NULL, NULL); \
 	} while (0)
 
 #define SCU_ASSERT_INT_EQUAL(actual, expected) \
@@ -76,13 +76,13 @@ extern "C" {
 #define SCU_ASSERT_NOT_EQUAL(actual, expected) \
 	do { \
 		_scu_account_assert(false); \
-		_scu_handle_assert(__FILE__, __LINE__, (actual) != (expected), false, "SCU_ASSERT_NOT_EQUAL", NULL, #actual, #expected, NULL, NULL); \
+		_SCU_HANDLE_ASSERT((actual) != (expected), false, "SCU_ASSERT_NOT_EQUAL", NULL, #actual, #expected, NULL, NULL); \
 	} while (0)
 
 #define SCU_ASSERT_MEM_EQUAL(actual, expected, size) \
 	do { \
 		_scu_account_assert(false); \
-		_scu_handle_assert(__FILE__, __LINE__, (memcmp(actual, expected, size) == 0), false, "SCU_ASSERT_MEM_EQUAL", NULL, #actual, #expected, NULL, NULL); \
+		_SCU_HANDLE_ASSERT((memcmp(actual, expected, size) == 0), false, "SCU_ASSERT_MEM_EQUAL", NULL, #actual, #expected, NULL, NULL); \
 	} while (0)
 
 #define SCU_ASSERT_PTR_NULL(ptr) \

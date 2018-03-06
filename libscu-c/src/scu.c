@@ -165,20 +165,24 @@ run_tests(size_t num_tests, long int test_indices[])
 /* Internal functions */
 
 void
+_scu_register_testcase(_scu_testcase *tc)
+{
+	if (((_scu_module_num_tests + 1) & _scu_module_num_tests) == 0) {
+		_scu_module_tests = realloc(_scu_module_tests, sizeof(_scu_testcase *) * (_scu_module_num_tests + 1) * 2);
+	}
+	_scu_module_tests[_scu_module_num_tests] = tc;
+	_scu_module_num_tests++;
+}
+
+void
 _scu_account_assert(bool is_fatal)
 {
 	if (is_fatal) {
 		assert(_scu_fatal_assert_jmpbuf_valid);
-		/* FATAL errors can only be used from same thread */
+		/* Fatal asserts can only be used from the same thread */
 		assert(get_current_thread_id() == _scu_fatal_assert_allowed_thread_id);
 	}
 	_scu_num_asserts++;
-}
-
-void
-_scu_handle_fatal_assert(void)
-{
-	longjmp(_scu_fatal_assert_jmpbuf, 1);
 }
 
 _scu_failure *
@@ -200,13 +204,9 @@ _scu_report_failure(const char *file, int line, const char *assert_method)
 }
 
 void
-_scu_register_testcase(_scu_testcase *tc)
+_scu_handle_fatal_assert(void)
 {
-	if (((_scu_module_num_tests + 1) & _scu_module_num_tests) == 0) {
-		_scu_module_tests = realloc(_scu_module_tests, sizeof(_scu_testcase *) * (_scu_module_num_tests + 1) * 2);
-	}
-	_scu_module_tests[_scu_module_num_tests] = tc;
-	_scu_module_num_tests++;
+	longjmp(_scu_fatal_assert_jmpbuf, 1);
 }
 
 /* Main function */

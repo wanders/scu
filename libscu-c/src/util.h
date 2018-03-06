@@ -1,7 +1,9 @@
 #ifndef _UTIL_H_
 #define _UTIL_H_
 
-#include <stdlib.h>
+#include <stddef.h>
+#include <time.h>
+#include <unistd.h>
 
 void _scu_strlcpy(char *dst, const char *src, size_t size);
 void _scu_cescape_str(char *dest, const char *src, size_t size);

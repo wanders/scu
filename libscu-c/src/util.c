@@ -23,39 +23,42 @@ _scu_strlcpy(char *dst, const char *src, size_t size)
 void
 _scu_cescape_str(char *dest, const char *src, size_t size)
 {
-	int o = 0;
-
 	assert(size >= 3);
 
+	size_t o = 0;
 	dest[o++] = '"';
 
-	for (int i = 0; src[i]; i++) {
+	#define NEED_OUTPUT_CHARS(n) \
+		if (o + (n) >= size - 2) break
+	#define PUT_CHAR(c) \
+		dest[o++] = c
+
+	for (size_t i = 0; src[i]; i++) {
 		unsigned char c = src[i];
 		if (c == '\n') {
-			if (o + 2 >= size - 2)
-				break;
-			dest[o++] = '\\';
-			dest[o++] = 'n';
+			NEED_OUTPUT_CHARS(2);
+			PUT_CHAR('\\');
+			PUT_CHAR('n');
 		} else if (c == '\t') {
-			if (o + 2 >= size - 2)
-				break;
-			dest[o++] = '\\';
-			dest[o++] = 't';
+			NEED_OUTPUT_CHARS(2);
+			PUT_CHAR('\\');
+			PUT_CHAR('t');
 		} else if (c < 32 || c >= 127) {
-			if (o + 4 >= size - 2)
-				break;
-			dest[o++] = '\\';
-			dest[o++] = 'x';
-			dest[o++] = "0123456789abcdef"[c >> 4];
-			dest[o++] = "0123456789abcdef"[c & 0xf];
+			NEED_OUTPUT_CHARS(4);
+			PUT_CHAR('\\');
+			PUT_CHAR('x');
+			PUT_CHAR("0123456789abcdef"[c >> 4]);
+			PUT_CHAR("0123456789abcdef"[c & 0xf]);
 		} else {
-			if (o + 1 >= size - 2)
-				break;
-			dest[o++] = c;
+			NEED_OUTPUT_CHARS(1);
+			PUT_CHAR(c);
 		}
 	}
-	dest[o++] = '"';
-	dest[o++] = 0;
+	PUT_CHAR('"');
+	PUT_CHAR(0);
+
+	#undef NEED_OUTPUT_CHARS
+	#undef PUT_CHAR
 }
 
 pid_t
