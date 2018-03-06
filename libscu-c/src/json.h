@@ -2,7 +2,6 @@
 #define _JSON_H_
 
 #include <stdio.h>
-#include <string.h>
 #include <unistd.h>
 
 #define _SCU_JSON_STRING_LENGTH 1024

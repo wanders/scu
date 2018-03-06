@@ -1,0 +1,10 @@
+#ifndef _CONFIG_H_
+#define _CONFIG_H_
+
+#define _SCU_MAX_TESTS 4096
+#define _SCU_MAX_TAGS 128
+#define _SCU_MAX_FAILURES 1024
+#define _SCU_FAILURE_MESSAGE_LENGTH 2048
+#define _SCU_FAILURE_VALUE_LENGTH 256
+
+#endif

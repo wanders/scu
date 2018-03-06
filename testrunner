@@ -257,11 +257,11 @@ def pretty_assert_method(assert_method, value_names, values):
         destlen = offsets[-1] + 5
         line = [' '] * destlen
         for o in offsets[:len(values)]:
-            line[o] = '|'
+            line[o] = '│'
         yield "".join(line).rstrip()
         for i, v in reversed(list(enumerate(values))):
-            line[offsets[i]] = '+'
-            line[offsets[i] + 1:] = ['-'] * (destlen - offsets[i] + 1)
+            line[offsets[i]] = '└'
+            line[offsets[i] + 1:] = ['─'] * (destlen - offsets[i] + 1)
             yield "".join(line) + " " + v
 
 
