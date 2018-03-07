@@ -123,16 +123,14 @@ _scu_handle_assert_nstr(const char *file, int line, const char *actual, const ch
 		if (!(cond)) { \
 			char _scu_assert_msg[1024]; \
 			snprintf(_scu_assert_msg, sizeof(_scu_assert_msg), message, ##__VA_ARGS__); \
-			_SCU_HANDLE_ASSERT(cond, is_fatal, assert_method, _scu_assert_msg, #cond, "TRUE", NULL, NULL); \
+			_SCU_HANDLE_ASSERT(cond, is_fatal, assert_method, _scu_assert_msg, #cond, "true", NULL, NULL); \
 		} \
 	} while (0)
 
 #define _SCU_ASSERT(cond, is_fatal, assert_method) \
 	do { \
 		_scu_account_assert(is_fatal); \
-		if (!(cond)) { \
-			_SCU_HANDLE_ASSERT(cond, is_fatal, assert_method, "", #cond, "TRUE", NULL, NULL); \
-		} \
+		_SCU_HANDLE_ASSERT(cond, is_fatal, assert_method, "", #cond, "true", NULL, NULL); \
 	} while (0)
 
 #endif

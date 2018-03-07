@@ -247,24 +247,6 @@ class TestModuleCollector(Observer):
         module.tests.append(TestCase(**event))
 
 
-def pretty_assert_method(assert_method, value_names, values):
-    offsets = [len(assert_method) + 1]
-    for v in value_names:
-        offsets.append(offsets[-1] + len(v) + 2)
-
-    yield Colors.RED + assert_method + Colors.DEFAULT + "(" + ", ".join(value_names) + ")"
-    if values:
-        destlen = offsets[-1] + 5
-        line = [' '] * destlen
-        for o in offsets[:len(values)]:
-            line[o] = '│'
-        yield "".join(line).rstrip()
-        for i, v in reversed(list(enumerate(values))):
-            line[offsets[i]] = '└'
-            line[offsets[i] + 1:] = ['─'] * (destlen - offsets[i] + 1)
-            yield "".join(line) + " " + v
-
-
 class TestEmitter(Observer):
 
     def __init__(self):
@@ -287,37 +269,46 @@ class TestEmitter(Observer):
         event_type = event['event']
         success = event['success'] if event_type == 'testcase_end' else False
         result = (Colors.GREEN + "PASS") if success else (Colors.RED + "FAIL")
-        print(
-            "    [ {result}{colors.DEFAULT} ] {desc}"
-            .format(desc=test.description, result=result, colors=Colors), end=''
-        )
+        print("    [ " + result + Colors.DEFAULT + " ] " + test.description, end='')
+        indent = 11 * ' '
         if event_type == 'testcase_end':
-            print(
-                " {colors.GRAY}({event[duration]:.3f} s){colors.DEFAULT}"
-                .format(event=event, colors=Colors)
-            )
+            print(" {colors.GRAY}({duration:.3f} s){colors.DEFAULT}".format(
+                duration=event['duration'], colors=Colors))
             if not success:
                 for failure in event['failures']:
-                    value_names = [v['name'] for v in failure['assert_method_values']]
-                    values = [v['value'] for v in failure['assert_method_values'] if 'value' in v]
-
                     if failure['message']:
-                        if not value_names:
-                            value_names = [failure['message']]
-                        else:
-                            print("           * " + failure['message'])
+                        print(indent + "* " + failure['message'])
 
-                    for l in pretty_assert_method(failure['assert_method'], value_names, values):
-                        print("           * " + l)
+                    names = [v['name'] for v in failure['assert_method_values']]
+                    values = [v['value'] for v in failure['assert_method_values'] if 'value' in v]
+                    for l in self.pretty_assert(failure['assert_method'], names, values):
+                        print(indent + "* " + l)
 
-                    print("           @ {file}:{line}".format(**failure))
+                    print(indent + "@ {file}:{line}".format(**failure))
         elif event_type == 'testcase_error':
             print('')
-            print("           ! {colors.RED}{event[message]}{colors.DEFAULT}".format(event=event, colors=Colors))
+            print(indent + "! " + Colors.RED + event['message'] + Colors.DEFAULT)
         if not success:
             with open(test.output_file_path) as f:
                 for line in f:
-                    print("           > " + line, end='')
+                    print(indent + "> " + line, end='')
+
+    def pretty_assert(self, method, names, values):
+        offsets = [len(method) + 1]
+        for v in names:
+            offsets.append(offsets[-1] + len(v) + 2)
+
+        yield Colors.RED + method + Colors.DEFAULT + "(" + ", ".join(names) + ")"
+        if values:
+            destlen = offsets[-1] + 3
+            line = [' '] * destlen
+            for o in offsets[:len(values)]:
+                line[o] = '│'
+            yield "".join(line).rstrip()
+            for i, v in reversed(list(enumerate(values))):
+                line[offsets[i]] = '└'
+                line[offsets[i] + 1:] = ['─'] * (destlen - (offsets[i] + 1))
+                yield "".join(line) + " " + v
 
 
 class SummaryEmitter(Observer):

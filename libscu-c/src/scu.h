@@ -52,6 +52,16 @@ extern "C" {
 #define SCU_ASSERT(cond) _SCU_ASSERT(cond, false, "SCU_ASSERT")
 #define SCU_ASSERT_FATAL(cond) _SCU_ASSERT(cond, true, "SCU_ASSERT_FATAL")
 
+#define SCU_ASSERT_TRUE(cond) \
+	_SCU_ASSERT(cond, false, "SCU_ASSERT_TRUE")
+#define SCU_ASSERT_TRUE_FATAL(cond) \
+	_SCU_ASSERT(cond, true, "SCU_ASSERT_TRUE_FATAL")
+#define SCU_ASSERT_FALSE(cond) \
+	_SCU_ASSERT(!(cond), false, "SCU_ASSERT_FALSE")
+	#define SCU_ASSERT_FALSE_FATAL(cond) \
+		_SCU_ASSERT(!(cond), true, "SCU_ASSERT_FALSE_FATAL")
+
+// TODO: make me generic
 #define SCU_ASSERT_EQUAL(actual, expected) \
 	do { \
 		_scu_account_assert(false); \
@@ -60,7 +70,7 @@ extern "C" {
 
 #define SCU_ASSERT_INT_EQUAL(actual, expected) \
 	do { \
-		/* store to temporaries to ensure arguments only are evaluated once */ \
+		/* Store to temporaries to ensure arguments are only evaluated once */ \
 		typeof(actual) _scu_temp_actual = (actual); \
 		typeof(expected) _scu_temp_expected = (expected); \
 		_scu_account_assert(false); \
@@ -122,12 +132,6 @@ extern "C" {
 	} while (0)
 
 /* TODO: implement these properly */
-#define SCU_ASSERT_TRUE_FATAL(val) \
-	SCU_ASSERT_FATAL(val)
-
-#define SCU_ASSERT_FALSE_FATAL(val) \
-	SCU_ASSERT_FATAL(!(val))
-
 #define SCU_ASSERT_NOT_EQUAL_FATAL(actual, expected) \
 	SCU_ASSERT_FATAL((actual) != (expected))
 

@@ -68,6 +68,11 @@ SCU_TEST(print_to_stdout_fail, "Print to stdout and fail")
 	SCU_FAIL("This should fail");
 }
 
+SCU_TEST(fail_with_message, "Assert that should fail with a message")
+{
+	SCU_ASSERT_WITH_MESSAGE(false, "This message should be presented");
+}
+
 SCU_TEST(zzz, "Sleepy testcase")
 {
 	sleep(2);
