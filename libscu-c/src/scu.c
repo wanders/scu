@@ -186,28 +186,36 @@ _scu_account_assert(bool is_fatal)
 	_scu_num_asserts++;
 }
 
-_scu_failure *
-_scu_report_failure(const char *file, int line, const char *assert_method)
+void __attribute__((noreturn))
+_scu_handle_fatal_fail(void)
+{
+	longjmp(_scu_fatal_assert_jmpbuf, 1);
+}
+
+void
+_scu_handle_failure(const char *file, int line, const char *assert_method, const char *msg, const char *actual, const char *expected, const char *actual_value, const char *expected_value, bool is_fatal)
 {
 	_scu_success = false;
 
 	if (_scu_num_failures >= _SCU_MAX_FAILURES)
-		return NULL;
+		goto handle_fatal;
 
-	_scu_failure *res = &_scu_failures[_scu_num_failures++];
+	_scu_failure *fail = &_scu_failures[_scu_num_failures++];
 
-	*res = (_scu_failure){
+	*fail = (_scu_failure){
 	    .file = file,
 	    .line = line,
 	    .assert_method = assert_method};
 
-	return res;
-}
+	_scu_strlcpy(fail->msg, msg ?: "", sizeof(fail->msg));
+	_scu_strlcpy(fail->lhs, actual ?: "", sizeof(fail->lhs));
+	_scu_strlcpy(fail->rhs, expected ?: "", sizeof(fail->rhs));
+	_scu_strlcpy(fail->lhs_value, actual_value ?: "", sizeof(fail->lhs_value));
+	_scu_strlcpy(fail->rhs_value, expected_value ?: "", sizeof(fail->rhs_value));
 
-void
-_scu_handle_fatal_assert(void)
-{
-	longjmp(_scu_fatal_assert_jmpbuf, 1);
+handle_fatal:
+	if (is_fatal)
+		_scu_handle_fatal_fail();
 }
 
 /* Main function */

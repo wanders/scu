@@ -65,12 +65,12 @@ SCU_TEST(print_to_stdout_fail, "Print to stdout and fail")
 {
 	printf("Output some text...\n");
 	printf("...and some more!\n");
-	SCU_FAIL("This should fail");
+	SCU_FAIL("");
 }
 
 SCU_TEST(fail_with_message, "Assert that should fail with a message")
 {
-	SCU_ASSERT_WITH_MESSAGE(false, "This message should be presented");
+	SCU_ASSERT_WITH_MESSAGE(false, "The answer is %d", 42);
 }
 
 SCU_TEST(zzz, "Sleepy testcase")
