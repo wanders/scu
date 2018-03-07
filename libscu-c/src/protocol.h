@@ -4,7 +4,7 @@
 #include "scu_internal.h"
 
 void _scu_output_module_list(int fd, const char *modulename);
-void _scu_output_test_list(int fd, int line, const char *name, const char *description, const char *tags[]);
+void _scu_output_test_list(int fd, size_t index, const char *name, const char *description, const char *tags[]);
 void _scu_output_module_start(int fd, const char *modulename);
 void _scu_output_module_end(int fd);
 void _scu_output_setup_start(int fd, const char *filename);

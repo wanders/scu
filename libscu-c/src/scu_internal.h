@@ -12,7 +12,7 @@
 
 typedef struct {
 	void (*func)(void);
-	int line;
+	size_t index;
 	const char *name;
 	const char *desc;
 	const char *tags[_SCU_MAX_TAGS];

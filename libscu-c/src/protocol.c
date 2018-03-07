@@ -24,14 +24,14 @@ _scu_output_module_list(int fd, const char *modulename)
 }
 
 void
-_scu_output_test_list(int fd, int line, const char *name, const char *description, const char *tags[])
+_scu_output_test_list(int fd, size_t idx, const char *name, const char *description, const char *tags[])
 {
 	json_object_start(fd);
 	json_object_key(fd, "event");
 	json_string(fd, "testcase_list");
 	json_separator(fd);
-	json_object_key(fd, "line");
-	json_integer(fd, line);
+	json_object_key(fd, "index");
+	json_integer(fd, idx);
 	json_separator(fd);
 	json_object_key(fd, "name");
 	json_string(fd, name);

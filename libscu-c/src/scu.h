@@ -33,7 +33,7 @@ extern "C" {
 	{ \
 		_Pragma("GCC diagnostic push"); \
 		_Pragma("GCC diagnostic ignored \"-Wmissing-field-initializers\""); \
-		static _scu_testcase tc = {name, __LINE__, #name, (desc), ##__VA_ARGS__}; \
+		static _scu_testcase tc = {name, 0, #name, (desc), ##__VA_ARGS__}; \
 		_Pragma("GCC diagnostic pop"); \
 		_scu_register_testcase(&tc); \
 	} \

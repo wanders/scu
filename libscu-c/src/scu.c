@@ -75,7 +75,7 @@ list_tests(void)
 
 	for (size_t i = 0; i < _scu_module_num_tests; i++) {
 		_scu_testcase *test = _scu_module_tests[i];
-		_scu_output_test_list(cmd, test->line, test->name, test->desc, test->tags);
+		_scu_output_test_list(cmd, test->index, test->name, test->desc, test->tags);
 	}
 }
 
@@ -171,6 +171,7 @@ _scu_register_testcase(_scu_testcase *tc)
 		_scu_module_tests = realloc(_scu_module_tests, sizeof(_scu_testcase *) * (_scu_module_num_tests + 1) * 2);
 	}
 	_scu_module_tests[_scu_module_num_tests] = tc;
+	tc->index = _scu_module_num_tests;
 	_scu_module_num_tests++;
 }
 
@@ -211,20 +212,10 @@ _scu_handle_fatal_assert(void)
 
 /* Main function */
 
-static int
-_scu_line_comparator(const void *a, const void *b)
-{
-	const _scu_testcase *const *ta = a;
-	const _scu_testcase *const *tb = b;
-	return (*ta)->line - (*tb)->line;
-}
-
 int
 main(int argc, char *argv[])
 {
 	_scu_arguments args = get_arguments(argc, argv, _scu_module_num_tests);
-
-	qsort(_scu_module_tests, _scu_module_num_tests, sizeof(_scu_testcase *), _scu_line_comparator);
 
 	if (args.list) {
 		list_tests();
