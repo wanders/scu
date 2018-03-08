@@ -134,8 +134,8 @@ SCU_TEST(json_escape, "Test that produces output that needs to be escaped")
 
 SCU_TEST(before_after, "Test that makes sure before and after functions have run")
 {
-	SCU_ASSERT(_before_counter == 15);
-	SCU_ASSERT(_after_counter == 14);
+	SCU_ASSERT(_before_counter == 16);
+	SCU_ASSERT(_after_counter == 15);
 }
 
 SCU_TEST(tags, "Test with tags", SCU_TAGS("tag1", "tag2"))
@@ -230,14 +230,36 @@ SCU_TEST(assert_equal_string_with_strange_chars, "Assert equal pretty printing -
 	SCU_ASSERT_STRING_EQUAL(x, MAGIC_VALUE);
 }
 
-SCU_TEST(assert_ptr_null, "Assert ptr null")
+SCU_TEST(assert_ptr_null, "Assert pointer null")
 {
 	const char *x = "foo";
+	const char *y = NULL;
 	SCU_ASSERT_PTR_NULL(x);
+	SCU_ASSERT_PTR_NULL(y);
 }
 
-SCU_TEST(assert_ptr_not_null, "Assert ptr not null")
+SCU_TEST(assert_ptr_not_null, "Assert pointer not null")
 {
-	const char *x = NULL;
+	const char *x = "foo";
+	const char *y = NULL;
 	SCU_ASSERT_PTR_NOT_NULL(x);
+	SCU_ASSERT_PTR_NOT_NULL(y);
+}
+
+SCU_TEST(assert_ptr_equal, "Assert pointer equal")
+{
+	const char *x = "foo";
+	const char *y = NULL;
+	SCU_ASSERT_PTR_EQUAL(x, x);
+	SCU_ASSERT_PTR_EQUAL(y, y);
+	SCU_ASSERT_PTR_EQUAL(x, y);
+}
+
+SCU_TEST(assert_ptr_not_equal, "Assert pointer not equal")
+{
+	const char *x = "foo";
+	const char *y = NULL;
+	SCU_ASSERT_PTR_NOT_EQUAL(x, x);
+	SCU_ASSERT_PTR_NOT_EQUAL(y, y);
+	SCU_ASSERT_PTR_NOT_EQUAL(x, y);
 }

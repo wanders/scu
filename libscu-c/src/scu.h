@@ -62,41 +62,41 @@ extern "C" {
 	_SCU_ASSERT(!(cond), "SCU_ASSERT_FALSE_FATAL", #cond, true)
 
 #define SCU_ASSERT_EQUAL(actual, expected) \
-	_SCU_ASSERT_EQUAL("SCU_ASSERT_EQUAL", actual, expected, false, false)
+	_SCU_ASSERT_EQUAL("SCU_ASSERT_EQUAL", #actual, #expected, actual, expected, false, false)
 #define SCU_ASSERT_EQUAL_FATAL(actual, expected) \
-	_SCU_ASSERT_EQUAL("SCU_ASSERT_EQUAL_FATAL", actual, expected, false, true)
+	_SCU_ASSERT_EQUAL("SCU_ASSERT_EQUAL_FATAL", #actual, #expected, actual, expected, false, true)
 #define SCU_ASSERT_NOT_EQUAL(actual, expected) \
-	_SCU_ASSERT_EQUAL("SCU_ASSERT_NOT_EQUAL", actual, expected, true, false)
+	_SCU_ASSERT_EQUAL("SCU_ASSERT_NOT_EQUAL", #actual, #expected, actual, expected, true, false)
 #define SCU_ASSERT_NOT_EQUAL_FATAL(actual, expected) \
-	_SCU_ASSERT_EQUAL("SCU_ASSERT_NOT_EQUAL_FATAL", actual, expected, true, true)
+	_SCU_ASSERT_EQUAL("SCU_ASSERT_NOT_EQUAL_FATAL", #actual, #expected, actual, expected, true, true)
 
 #define SCU_ASSERT_INT_EQUAL(actual, expected) \
-	_SCU_ASSERT_EQUAL_INT("SCU_ASSERT_INT_EQUAL", actual, expected, false, false)
+	_SCU_ASSERT_EQUAL_INT("SCU_ASSERT_INT_EQUAL", #actual, #expected, actual, expected, false, false)
 #define SCU_ASSERT_INT_EQUAL_FATAL(actual, expected) \
-	_SCU_ASSERT_EQUAL_INT("SCU_ASSERT_INT_EQUAL_FATAL", actual, expected, false, true)
+	_SCU_ASSERT_EQUAL_INT("SCU_ASSERT_INT_EQUAL_FATAL", #actual, #expected, actual, expected, false, true)
 #define SCU_ASSERT_INT_NOT_EQUAL(actual, expected) \
-	_SCU_ASSERT_EQUAL_INT("SCU_ASSERT_INT_NOT_EQUAL", actual, expected, true, false)
+	_SCU_ASSERT_EQUAL_INT("SCU_ASSERT_INT_NOT_EQUAL", #actual, #expected, actual, expected, true, false)
 #define SCU_ASSERT_INT_NOT_EQUAL_FATAL(actual, expected) \
-	_SCU_ASSERT_EQUAL_INT("SCU_ASSERT_INT_NOT_EQUAL_FATAL", actual, expected, true, true)
+	_SCU_ASSERT_EQUAL_INT("SCU_ASSERT_INT_NOT_EQUAL_FATAL", #actual, #expected, actual, expected, true, true)
 
 // TODO: float etc.
 
 #define SCU_ASSERT_PTR_NULL(ptr) \
-	_SCU_ASSERT_EQUAL_POINTER("SCU_ASSERT_PTR_NULL", ptr, NULL, false, false)
+	_SCU_ASSERT_EQUAL_POINTER("SCU_ASSERT_PTR_NULL", #ptr, NULL, ptr, NULL, false, false)
 #define SCU_ASSERT_PTR_NULL_FATAL(ptr) \
-	_SCU_ASSERT_EQUAL_POINTER("SCU_ASSERT_PTR_NULL_FATAL", ptr, NULL, false, true)
+	_SCU_ASSERT_EQUAL_POINTER("SCU_ASSERT_PTR_NULL_FATAL", #ptr, NULL, ptr, NULL, false, true)
 #define SCU_ASSERT_PTR_NOT_NULL(ptr) \
-	_SCU_ASSERT_EQUAL_POINTER("SCU_ASSERT_PTR_NOT_NULL", ptr, NULL, true, false)
+	_SCU_ASSERT_EQUAL_POINTER("SCU_ASSERT_PTR_NOT_NULL", #ptr, NULL, ptr, NULL, true, false)
 #define SCU_ASSERT_PTR_NOT_NULL_FATAL(ptr) \
-	_SCU_ASSERT_EQUAL_POINTER("SCU_ASSERT_PTR_NOT_NULL_FATAL", ptr, NULL, true, true)
+	_SCU_ASSERT_EQUAL_POINTER("SCU_ASSERT_PTR_NOT_NULL_FATAL", #ptr, NULL, ptr, NULL, true, true)
 #define SCU_ASSERT_PTR_EQUAL(actual, expected) \
-	_SCU_ASSERT_EQUAL_POINTER("SCU_ASSERT_PTR_EQUAL", actual, expected, false, false)
+	_SCU_ASSERT_EQUAL_POINTER("SCU_ASSERT_PTR_EQUAL", #actual, #expected, actual, expected, false, false)
 #define SCU_ASSERT_PTR_EQUAL_FATAL(actual, expected) \
-	_SCU_ASSERT_EQUAL_POINTER("SCU_ASSERT_PTR_EQUAL_FATAL", actual, expected, false, true)
+	_SCU_ASSERT_EQUAL_POINTER("SCU_ASSERT_PTR_EQUAL_FATAL", #actual, #expected, actual, expected, false, true)
 #define SCU_ASSERT_PTR_NOT_EQUAL(actual, expected) \
-	_SCU_ASSERT_EQUAL_POINTER("SCU_ASSERT_PTR_NOT_EQUAL", actual, expected, true, false)
+	_SCU_ASSERT_EQUAL_POINTER("SCU_ASSERT_PTR_NOT_EQUAL", #actual, #expected, actual, expected, true, false)
 #define SCU_ASSERT_PTR_NOT_EQUAL_FATAL(actual, expected) \
-	_SCU_ASSERT_EQUAL_POINTER("SCU_ASSERT_PTR_NOT_EQUAL_FATAL", actual, expected, true, true)
+	_SCU_ASSERT_EQUAL_POINTER("SCU_ASSERT_PTR_NOT_EQUAL_FATAL", #actual, #expected, actual, expected, true, true)
 
 
 
@@ -130,13 +130,13 @@ extern "C" {
 
 
 #define SCU_ASSERT_MEM_EQUAL(actual, expected, size) \
-	_SCU_ASSERT_EQUAL_MEMORY("SCU_ASSERT_MEM_EQUAL", actual, expected, size, false, false)
+	_SCU_ASSERT_EQUAL_MEMORY("SCU_ASSERT_MEM_EQUAL", #actual, #expected, actual, expected, size, false, false)
 #define SCU_ASSERT_MEM_EQUAL_FATAL(actual, expected, size) \
-	_SCU_ASSERT_EQUAL_MEMORY("SCU_ASSERT_MEM_EQUAL_FATAL", actual, expected, size, false, true)
+	_SCU_ASSERT_EQUAL_MEMORY("SCU_ASSERT_MEM_EQUAL_FATAL", #actual, #expected, actual, expected, size, false, true)
 #define SCU_ASSERT_MEM_NOT_EQUAL(actual, expected, size) \
-	_SCU_ASSERT_EQUAL_MEMORY("SCU_ASSERT_MEM_NOT_EQUAL", actual, expected, size, true, false)
+	_SCU_ASSERT_EQUAL_MEMORY("SCU_ASSERT_MEM_NOT_EQUAL", #actual, #expected, actual, expected, size, true, false)
 #define SCU_ASSERT_MEM_NOT_EQUAL_FATAL(actual, expected, size) \
-	_SCU_ASSERT_EQUAL_MEMORY("SCU_ASSERT_MEM_NOT_EQUAL_FATAL", actual, expected, size, true, true)
+	_SCU_ASSERT_EQUAL_MEMORY("SCU_ASSERT_MEM_NOT_EQUAL_FATAL", #actual, #expected, actual, expected, size, true, true)
 
 #ifdef __cplusplus
 }

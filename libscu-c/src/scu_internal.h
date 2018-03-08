@@ -64,11 +64,7 @@ _scu_assert_equal_ptr(const char *file, int line, const char *assert_method, con
 	char actual_buf[20];
 	char expected_buf[20];
 	_scu_prettyprint_pointer_value(actual_buf, sizeof(actual_buf), actual);
-	if (!expected && invert) {
-		_scu_strlcpy(expected_buf, "not null", sizeof(expected_buf));
-	} else {
-		_scu_prettyprint_pointer_value(expected_buf, sizeof(expected_buf), expected);
-	}
+	_scu_prettyprint_pointer_value(expected_buf, sizeof(expected_buf), expected);
 	_scu_handle_failure(file, line, assert_method, NULL, actual_str, expected_str, actual_buf, expected_str ? expected_buf : NULL, is_fatal);
 }
 
@@ -145,41 +141,48 @@ _scu_assert_equal_memory(const char *file, int line, const char *assert_method, 
 		} \
 	} while (0)
 
-#define _SCU_ASSERT_EQUAL(assert_method, actual, expected, invert, is_fatal) \
+/* TODO: This needs a C++ implementation as well */
+#define _SCU_ASSERT_EQUAL(assert_method, actual_str, expected_str, actual, expected, invert, is_fatal) \
 	_Generic (_scu_temp_expected, \
-		int: _SCU_ASSERT_EQUAL_INT(assert_method, actual, expected, invert, is_fatal), \
-		unsigned int: _SCU_ASSERT_EQUAL_INT(assert_method, actual, expected, invert, is_fatal), \
-		float: _SCU_ASSERT_EQUAL_FLOAT(assert_method, actual, expected, invert, is_fatal), \
-		double: _SCU_ASSERT_EQUAL_FLOAT(assert_method, actual, expected, invert, is_fatal), \
-		void *: _SCU_ASSERT_EQUAL_POINTER(assert_method, actual, expected, invert, is_fatal), \
-		char *: _SCU_ASSERT_EQUAL_STRING(assert_method, actual, expected, -1, invert, is_fatal), \
-		default: _SCU_ASSERT((actual) == (expected), is_fatal, assert_method) \
+		int: _SCU_ASSERT_EQUAL_INT(assert_method, actual_str, expected_str, actual, expected, invert, is_fatal), \
+		unsigned int: _SCU_ASSERT_EQUAL_INT(assert_method, actual_str, expected_str, actual, expected, invert, is_fatal), \
+		float: _SCU_ASSERT_EQUAL_FLOAT(assert_method, actual_str, expected_str, actual, expected, invert, is_fatal), \
+		double: _SCU_ASSERT_EQUAL_FLOAT(assert_method, actual_str, expected_str, actual, expected, invert, is_fatal), \
+		void *: _SCU_ASSERT_EQUAL_POINTER(assert_method, actual_str, expected_str, actual, expected, invert, is_fatal), \
+		char *: _SCU_ASSERT_EQUAL_STRING(assert_method, actual_str, expected_str, actual, expected, -1, invert, is_fatal), \
+		default: _SCU_ASSERT((actual) == (expected), assert_method, actual_str " == " expected_str, is_fatal) \
 	) \
 
-#define _SCU_ASSERT_EQUAL_INT(assert_method, actual, expected, invert, is_fatal) \
+#define _SCU_ASSERT_EQUAL_INT(assert_method, actual_str, expected_str, actual, expected, invert, is_fatal) \
 	do { \
 		typeof(actual) _scu_temp_actual = (actual); \
 		typeof(expected) _scu_temp_expected = (expected); \
 		_scu_account_assert(is_fatal); \
-		_scu_assert_equal_int(__FILE__, __LINE__, assert_method, #actual, #expected, _scu_temp_actual, _scu_temp_expected, sizeof(_scu_temp_actual), sizeof(_scu_temp_expected), invert, is_fatal); \
+		_scu_assert_equal_int(__FILE__, __LINE__, assert_method, actual_str, expected_str, _scu_temp_actual, _scu_temp_expected, sizeof(_scu_temp_actual), sizeof(_scu_temp_expected), invert, is_fatal); \
 	} while (0)
 
-#define _SCU_ASSERT_EQUAL_POINTER(assert_method, actual, expected, invert, is_fatal) \
+#define _SCU_ASSERT_EQUAL_POINTER(assert_method, actual_str, expected_str, actual, expected, invert, is_fatal) \
 	do { \
 		_scu_account_assert(is_fatal); \
-		_scu_assert_equal_ptr(__FILE__, __LINE__, assert_method, #actual, #expected, actual, expected, invert, is_fatal); \
+		_scu_assert_equal_ptr(__FILE__, __LINE__, assert_method, actual_str, expected_str, actual, expected, invert, is_fatal); \
 	} while (0)
 
-#define _SCU_ASSERT_EQUAL_FLOAT(assert_method, actual, expected, invert, is_fatal) \
-	_scu_assert_equal_float(__FILE__, __LINE__, assert_method, #actual, #expected, actual, expected, invert, is_fatal)
-
-#define _SCU_ASSERT_EQUAL_STRING(assert_method, actual, expected, size, invert, is_fatal) \
-	_scu_assert_equal_str(__FILE__, __LINE__, assert_method, #actual, #expected, actual, expected, size, invert, is_fatal)
-
-#define _SCU_ASSERT_EQUAL_MEMORY(assert_method, actual, expected, size, invert, is_fatal) \
+#define _SCU_ASSERT_EQUAL_FLOAT(assert_method, actual_str, expected_str, actual, expected, invert, is_fatal) \
 	do { \
 		_scu_account_assert(is_fatal); \
-		_scu_assert_equal_memory(__FILE__, __LINE__, assert_method, #actual, #expected, actual, expected, size, invert, is_fatal); \
+		_scu_assert_equal_float(__FILE__, __LINE__, assert_method, actual_str, expected_str, actual, expected, invert, is_fatal); \
+	} while (0)
+
+#define _SCU_ASSERT_EQUAL_STRING(assert_method, actual_str, expected_str, actual, expected, size, invert, is_fatal) \
+	do { \
+		_scu_account_assert(is_fatal); \
+		_scu_assert_equal_str(__FILE__, __LINE__, assert_method, actual_str, expected_str, actual, expected, size, invert, is_fatal); \
+	} while (0)
+
+#define _SCU_ASSERT_EQUAL_MEMORY(assert_method, actual_str, expected_str, actual, expected, size, invert, is_fatal) \
+	do { \
+		_scu_account_assert(is_fatal); \
+		_scu_assert_equal_memory(__FILE__, __LINE__, assert_method, actual_str, expected_str, actual, expected, size, invert, is_fatal); \
 	} while (0)
 
 #endif
