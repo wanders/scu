@@ -162,15 +162,14 @@ _scu_assert_equal_memory(const char *file, int line, const char *assert_method, 
 
 /* TODO: This needs a C++ implementation as well */
 #define _SCU_ASSERT_EQUAL(assert_method, actual_str, expected_str, actual, expected, invert, is_fatal) \
-	_Generic (_scu_temp_expected, \
+	_Generic (expected, \
 		int: _SCU_ASSERT_EQUAL_INT(assert_method, actual_str, expected_str, actual, expected, invert, is_fatal), \
-		unsigned int: _SCU_ASSERT_EQUAL_INT(assert_method, actual_str, expected_str, actual, expected, invert, is_fatal), \
 		float: _SCU_ASSERT_EQUAL_FLOAT(assert_method, actual_str, expected_str, actual, expected, invert, is_fatal), \
 		double: _SCU_ASSERT_EQUAL_FLOAT(assert_method, actual_str, expected_str, actual, expected, invert, is_fatal), \
 		void *: _SCU_ASSERT_EQUAL_POINTER(assert_method, actual_str, expected_str, actual, expected, invert, is_fatal), \
 		char *: _SCU_ASSERT_EQUAL_STRING(assert_method, actual_str, expected_str, actual, expected, -1, invert, is_fatal), \
 		default: _SCU_ASSERT((actual) == (expected), assert_method, actual_str " == " expected_str, is_fatal) \
-	) \
+	)
 
 #define _SCU_ASSERT_EQUAL_INT(assert_method, actual_str, expected_str, actual, expected, invert, is_fatal) \
 	do { \

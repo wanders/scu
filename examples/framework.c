@@ -263,3 +263,40 @@ SCU_TEST(assert_ptr_not_equal, "Assert pointer not equal")
 	SCU_ASSERT_PTR_NOT_EQUAL(y, y);
 	SCU_ASSERT_PTR_NOT_EQUAL(x, y);
 }
+
+SCU_TEST(assert_generic_equal, "Generic assert equal")
+{
+	typedef struct {
+		int a;
+	} custom_type;
+
+	int x_int = 1;
+	int y_int = 2;
+	unsigned int x_uint = 1;
+	unsigned int y_uint = 2;
+	float x_float = 1.0;
+	float y_float = 2.0;
+	double x_double = 1.0;
+	double y_double = 2.0;
+	const void *x_ptr = "foo";
+	const void *y_ptr = NULL;
+	const char *x_str = "foo";
+	const char *y_str = "bar";
+	custom_type x_other = { 1 };
+	custom_type y_other = { 2 };
+
+	SCU_ASSERT_EQUAL(x_int, y_int);
+	SCU_ASSERT_NOT_EQUAL(x_int, y_int);
+	SCU_ASSERT_EQUAL(x_uint, y_uint);
+	SCU_ASSERT_NOT_EQUAL(x_uint, y_uint);
+	SCU_ASSERT_EQUAL(x_float, y_float);
+	SCU_ASSERT_NOT_EQUAL(x_float, y_float);
+	SCU_ASSERT_EQUAL(x_double, y_double);
+	SCU_ASSERT_NOT_EQUAL(x_double, y_double);
+	SCU_ASSERT_EQUAL(x_ptr, y_ptr);
+	SCU_ASSERT_NOT_EQUAL(x_ptr, y_ptr);
+	SCU_ASSERT_EQUAL(x_str, y_str);
+	SCU_ASSERT_NOT_EQUAL(x_str, y_str);
+	SCU_ASSERT_EQUAL(x_other, y_other);
+	SCU_ASSERT_NOT_EQUAL(x_other, y_other);
+}
