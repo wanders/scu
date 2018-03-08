@@ -14,9 +14,9 @@ _scu_prettyprint_integer_value(char *buf, size_t size, unsigned long long value,
 }
 
 static inline void __attribute__((used))
-_scu_prettyprint_float_value(char *buf, size_t size, double value)
+_scu_prettyprint_float_value(char *buf, size_t size, long double value)
 {
-	snprintf(buf, size, "%f", value);
+	snprintf(buf, size, "%Lf", value);
 }
 
 static inline void __attribute__((used))

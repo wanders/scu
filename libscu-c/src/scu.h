@@ -46,20 +46,24 @@ extern "C" {
 #define SCU_FATAL(msg) \
 	_SCU_HANDLE_FAILURE("SCU_FATAL", msg, NULL, NULL, NULL, NULL, true);
 
-#define SCU_ASSERT_WITH_MESSAGE(cond, msg, ...) _SCU_ASSERT_WITH_MESSAGE(cond, "SCU_ASSERT_WITH_MESSAGE", #cond, false, msg, ##__VA_ARGS__)
-#define SCU_ASSERT_WITH_MESSAGE_FATAL(cond, msg, ...) _SCU_ASSERT_WITH_MESSAGE(cond, "SCU_ASSERT_WITH_MESSAGE_FATAL", #cond, true, msg, ##__VA_ARGS__)
+#define SCU_ASSERT_WITH_MESSAGE(cond, msg, ...) \
+	_SCU_ASSERT_WITH_MESSAGE(cond, "SCU_ASSERT_WITH_MESSAGE", #cond, false, msg, ##__VA_ARGS__)
+#define SCU_ASSERT_WITH_MESSAGE_FATAL(cond, msg, ...) \
+	_SCU_ASSERT_WITH_MESSAGE(cond, "SCU_ASSERT_WITH_MESSAGE_FATAL", #cond, true, msg, ##__VA_ARGS__)
 
-#define SCU_ASSERT(cond) _SCU_ASSERT(cond, "SCU_ASSERT", #cond, false)
-#define SCU_ASSERT_FATAL(cond) _SCU_ASSERT(cond, "SCU_ASSERT_FATAL", #cond, true)
+#define SCU_ASSERT(cond) \
+	_SCU_ASSERT(cond, "SCU_ASSERT", #cond, false, false)
+#define SCU_ASSERT_FATAL(cond) \
+	_SCU_ASSERT(cond, "SCU_ASSERT_FATAL", #cond, false, true)
 
 #define SCU_ASSERT_TRUE(cond) \
-	_SCU_ASSERT(cond, "SCU_ASSERT_TRUE", #cond, false)
+	_SCU_ASSERT(cond, "SCU_ASSERT_TRUE", #cond, false, false)
 #define SCU_ASSERT_TRUE_FATAL(cond) \
-	_SCU_ASSERT(cond, "SCU_ASSERT_TRUE_FATAL", #cond, true)
+	_SCU_ASSERT(cond, "SCU_ASSERT_TRUE_FATAL", #cond, false, true)
 #define SCU_ASSERT_FALSE(cond) \
-	_SCU_ASSERT(!(cond), "SCU_ASSERT_FALSE", #cond, false)
+	_SCU_ASSERT(!(cond), "SCU_ASSERT_FALSE", #cond, true, false)
 #define SCU_ASSERT_FALSE_FATAL(cond) \
-	_SCU_ASSERT(!(cond), "SCU_ASSERT_FALSE_FATAL", #cond, true)
+	_SCU_ASSERT(!(cond), "SCU_ASSERT_FALSE_FATAL", #cond, true, true)
 
 #define SCU_ASSERT_EQUAL(actual, expected) \
 	_SCU_ASSERT_EQUAL("SCU_ASSERT_EQUAL", #actual, #expected, actual, expected, false, false)

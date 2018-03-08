@@ -217,6 +217,12 @@ SCU_TEST(assert_equal_signed_int_different_types, "Assert equal pretty printing 
 	SCU_ASSERT_INT_EQUAL(minus_one_long_long, -2);
 }
 
+SCU_TEST(assert_equal_float, "Assert equal pretty printing - float")
+{
+	float x = 1.5;
+	SCU_ASSERT_FLOAT_EQUAL(x, 2.5);
+}
+
 SCU_TEST(assert_equal_string, "Assert equal pretty printing - string")
 {
 	const char *x = "foo";
