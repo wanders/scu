@@ -56,6 +56,19 @@ _scu_assert_equal_int(const char *file, int line, const char *assert_method, con
 }
 
 static inline void __attribute__((used))
+_scu_assert_equal_float(const char *file, int line, const char *assert_method, const char *actual_str, const char *expected_str, double actual, double expected, bool invert, bool is_fatal)
+{
+	if ((actual == expected) ^ invert)
+		return;
+
+	char actual_buf[20];
+	char expected_buf[20];
+	_scu_prettyprint_float_value(actual_buf, sizeof(actual_buf), actual);
+	_scu_prettyprint_float_value(expected_buf, sizeof(expected_buf), expected);
+	_scu_handle_failure(file, line, assert_method, NULL, actual_str, expected_str, actual_buf, expected_buf, is_fatal);
+}
+
+static inline void __attribute__((used))
 _scu_assert_equal_ptr(const char *file, int line, const char *assert_method, const char *actual_str, const char *expected_str, const void *actual, const void *expected, bool invert, bool is_fatal)
 {
 	if ((actual == expected) ^ invert)
@@ -68,13 +81,8 @@ _scu_assert_equal_ptr(const char *file, int line, const char *assert_method, con
 	_scu_handle_failure(file, line, assert_method, NULL, actual_str, expected_str, actual_buf, expected_str ? expected_buf : NULL, is_fatal);
 }
 
-
-
-
-
-// TODO: rewrite me
 static inline void __attribute__((used))
-_scu_handle_assert_nstr(const char *file, int line, const char *actual, const char *expected, int size, bool is_fatal, bool inverse, const char *assert_method, const char *actual_str, const char *expected_str)
+_scu_assert_equal_str(const char *file, int line, const char *assert_method, const char *actual_str, const char *expected_str, const char *actual, const char *expected, int size, bool invert, bool is_fatal)
 {
 	int res;
 	if (size == -1) {
@@ -82,20 +90,17 @@ _scu_handle_assert_nstr(const char *file, int line, const char *actual, const ch
 	} else {
 		res = strncmp(actual, expected, size);
 	}
-	if ((res != 0) ^ inverse) {
-		char actual_value[256];
-		char expected_value[256];
 
-		/* TODO: For overlong strings find the (first) section where they differ */
-		_scu_cescape_str(actual_value, actual, sizeof(actual_value));
-		_scu_cescape_str(expected_value, expected, sizeof(expected_value));
-		_scu_handle_failure(file, line, assert_method, NULL, actual_str, expected_str, actual_value, expected_value, is_fatal);
-	}
+	if ((res == 0) ^ invert)
+		return;
+
+	char actual_buf[256];
+	char expected_buf[256];
+	/* TODO: For overlong strings find the (first) section where they differ */
+	_scu_cescape_str(actual_buf, actual, sizeof(actual_buf));
+	_scu_cescape_str(expected_buf, expected, sizeof(expected_buf));
+	_scu_handle_failure(file, line, assert_method, NULL, actual_str, expected_str, actual_buf, expected_buf, is_fatal);
 }
-
-
-
-
 
 static inline void __attribute__((used))
 _scu_assert_equal_memory(const char *file, int line, const char *assert_method, const char *actual_str, const char *expected_str, const void *actual, const void *expected, size_t size, bool invert, bool is_fatal)
@@ -161,16 +166,16 @@ _scu_assert_equal_memory(const char *file, int line, const char *assert_method, 
 		_scu_assert_equal_int(__FILE__, __LINE__, assert_method, actual_str, expected_str, _scu_temp_actual, _scu_temp_expected, sizeof(_scu_temp_actual), sizeof(_scu_temp_expected), invert, is_fatal); \
 	} while (0)
 
-#define _SCU_ASSERT_EQUAL_POINTER(assert_method, actual_str, expected_str, actual, expected, invert, is_fatal) \
-	do { \
-		_scu_account_assert(is_fatal); \
-		_scu_assert_equal_ptr(__FILE__, __LINE__, assert_method, actual_str, expected_str, actual, expected, invert, is_fatal); \
-	} while (0)
-
 #define _SCU_ASSERT_EQUAL_FLOAT(assert_method, actual_str, expected_str, actual, expected, invert, is_fatal) \
 	do { \
 		_scu_account_assert(is_fatal); \
 		_scu_assert_equal_float(__FILE__, __LINE__, assert_method, actual_str, expected_str, actual, expected, invert, is_fatal); \
+	} while (0)
+
+#define _SCU_ASSERT_EQUAL_POINTER(assert_method, actual_str, expected_str, actual, expected, invert, is_fatal) \
+	do { \
+		_scu_account_assert(is_fatal); \
+		_scu_assert_equal_ptr(__FILE__, __LINE__, assert_method, actual_str, expected_str, actual, expected, invert, is_fatal); \
 	} while (0)
 
 #define _SCU_ASSERT_EQUAL_STRING(assert_method, actual_str, expected_str, actual, expected, size, invert, is_fatal) \

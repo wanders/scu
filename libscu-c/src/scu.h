@@ -79,7 +79,14 @@ extern "C" {
 #define SCU_ASSERT_INT_NOT_EQUAL_FATAL(actual, expected) \
 	_SCU_ASSERT_EQUAL_INT("SCU_ASSERT_INT_NOT_EQUAL_FATAL", #actual, #expected, actual, expected, true, true)
 
-// TODO: float etc.
+#define SCU_ASSERT_FLOAT_EQUAL(actual, expected) \
+	_SCU_ASSERT_EQUAL_FLOAT("SCU_ASSERT_FLOAT_EQUAL", #actual, #expected, actual, expected, false, false)
+#define SCU_ASSERT_FLOAT_EQUAL_FATAL(actual, expected) \
+	_SCU_ASSERT_EQUAL_FLOAT("SCU_ASSERT_FLOAT_EQUAL_FATAL", #actual, #expected, actual, expected, false, true)
+#define SCU_ASSERT_FLOAT_NOT_EQUAL(actual, expected) \
+	_SCU_ASSERT_EQUAL_FLOAT("SCU_ASSERT_FLOAT_NOT_EQUAL", #actual, #expected, actual, expected, true, false)
+#define SCU_ASSERT_FLOAT_NOT_EQUAL_FATAL(actual, expected) \
+	_SCU_ASSERT_EQUAL_FLOAT("SCU_ASSERT_FLOAT_NOT_EQUAL_FATAL", #actual, #expected, actual, expected, true, true)
 
 #define SCU_ASSERT_PTR_NULL(ptr) \
 	_SCU_ASSERT_EQUAL_POINTER("SCU_ASSERT_PTR_NULL", #ptr, NULL, ptr, NULL, false, false)
@@ -98,36 +105,22 @@ extern "C" {
 #define SCU_ASSERT_PTR_NOT_EQUAL_FATAL(actual, expected) \
 	_SCU_ASSERT_EQUAL_POINTER("SCU_ASSERT_PTR_NOT_EQUAL_FATAL", #actual, #expected, actual, expected, true, true)
 
-
-
-
-
-	// TODO: rewrite me
 #define SCU_ASSERT_STRING_EQUAL(actual, expected) \
-	do { \
-		_scu_account_assert(false); \
-		_scu_handle_assert_nstr(__FILE__, __LINE__, (actual), (expected), -1, false, false, "SCU_ASSERT_STRING_EQUAL", #actual, #expected); \
-	} while (0)
-
-#define SCU_ASSERT_NSTRING_EQUAL(actual, expected, size) \
-	do { \
-		_scu_account_assert(false); \
-		_scu_handle_assert_nstr(__FILE__, __LINE__, (actual), (expected), size, false, false, "SCU_ASSERT_NSTRING_EQUAL", #actual, #expected); \
-	} while (0)
-
-#if 0
-#define SCU_ASSERT_MEM_EQUAL_FATAL(actual, expected, size) \
-	SCU_ASSERT_FATAL(memcmp(actual, expected, size) == 0)
-
+	_SCU_ASSERT_EQUAL_STRING("SCU_ASSERT_STRING_EQUAL", #actual, #expected, actual, expected, -1, false, false)
 #define SCU_ASSERT_STRING_EQUAL_FATAL(actual, expected) \
-	SCU_ASSERT_FATAL(strcmp(actual, expected) == 0)
-
+	_SCU_ASSERT_EQUAL_STRING("SCU_ASSERT_STRING_EQUAL_FATAL", #actual, #expected, actual, expected, -1, false, true)
+#define SCU_ASSERT_STRING_NOT_EQUAL(actual, expected) \
+	_SCU_ASSERT_EQUAL_STRING("SCU_ASSERT_STRING_NOT_EQUAL", #actual, #expected, actual, expected, -1, true, false)
+#define SCU_ASSERT_STRING_NOT_EQUAL_FATAL(actual, expected) \
+	_SCU_ASSERT_EQUAL_STRING("SCU_ASSERT_STRING_NOT_EQUAL_FATAL", #actual, #expected, actual, expected, -1, true, true)
+#define SCU_ASSERT_NSTRING_EQUAL(actual, expected, size) \
+	_SCU_ASSERT_EQUAL_STRING("SCU_ASSERT_NSTRING_EQUAL", #actual, #expected, actual, expected, size, false, false)
 #define SCU_ASSERT_NSTRING_EQUAL_FATAL(actual, expected, size) \
-	SCU_ASSERT_FATAL(strncmp(actual, expected, size) == 0)
-#endif
-
-
-
+	_SCU_ASSERT_EQUAL_STRING("SCU_ASSERT_NSTRING_EQUAL_FATAL", #actual, #expected, actual, expected, size, false, true)
+#define SCU_ASSERT_NSTRING_NOT_EQUAL(actual, expected, size) \
+	_SCU_ASSERT_EQUAL_STRING("SCU_ASSERT_NSTRING_NOT_EQUAL", #actual, #expected, actual, expected, size, true, false)
+#define SCU_ASSERT_NSTRING_NOT_EQUAL_FATAL(actual, expected, size) \
+	_SCU_ASSERT_EQUAL_STRING("SCU_ASSERT_NSTRING_NOT_EQUAL_FATAL", #actual, #expected, actual, expected, size, true, true)
 
 #define SCU_ASSERT_MEM_EQUAL(actual, expected, size) \
 	_SCU_ASSERT_EQUAL_MEMORY("SCU_ASSERT_MEM_EQUAL", #actual, #expected, actual, expected, size, false, false)

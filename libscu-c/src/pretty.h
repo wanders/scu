@@ -16,6 +16,12 @@ _scu_prettyprint_integer_value(char *buf, size_t size, unsigned long long value,
 }
 
 static inline void __attribute__((used))
+_scu_prettyprint_float_value(char *buf, size_t size, double value)
+{
+	snprintf(buf, size, "%f", value);
+}
+
+static inline void __attribute__((used))
 _scu_prettyprint_pointer_value(char *buf, size_t size, const void *ptr)
 {
 	if (ptr) {
@@ -28,10 +34,14 @@ _scu_prettyprint_pointer_value(char *buf, size_t size, const void *ptr)
 static inline void __attribute__((used))
 _scu_prettyprint_bytes_value(char *buf, size_t size, const void *value, size_t value_size)
 {
+	static const size_t BYTES_PER_LINE = 16;
+
 	const unsigned char *value_as_char = (const unsigned char *)value;
 	size_t o = 0;
 
-	#define BYTES_PER_LINE 16
+	#define PUT_CHAR(c) \
+		buf[o++] = c
+
 	size_t lines = ((value_size + (BYTES_PER_LINE - 1)) / BYTES_PER_LINE);
 
 	for (size_t i = 0; i < lines; i++) {
@@ -44,27 +54,26 @@ _scu_prettyprint_bytes_value(char *buf, size_t size, const void *value, size_t v
 
 		if (i && last_line) {
 			for (size_t j = 0; j < (BYTES_PER_LINE - (value_size - i * BYTES_PER_LINE)) * 3; j++) {
-				buf[o++] = ' ';
+				PUT_CHAR(' ');
 			}
 		}
-		buf[o++] = ' ';
+		PUT_CHAR(' ');
 
 		for (size_t j = 0; (i * BYTES_PER_LINE + j < value_size) && (j < BYTES_PER_LINE) && (o < (size - 1)); j++) {
 			unsigned char c = value_as_char[i * BYTES_PER_LINE + j];
 			if (c < 32 || c >= 127) {
-				buf[o++] = '.';
+				PUT_CHAR('.');
 			} else {
-				buf[o++] = c;
+				PUT_CHAR(c);
 			}
 		}
 
 		if (last_line) {
-			buf[o] = 0;
+			PUT_CHAR(0);
 		} else {
-			buf[o++] = '\n';
+			PUT_CHAR('\n');
 		}
 	}
-	#undef BYTES_PER_LINE
 }
 
 #endif
