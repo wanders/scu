@@ -271,7 +271,7 @@ class TestEmitter(Observer):
         success = event['success'] if event_type == 'testcase_end' else False
         result = (Colors.GREEN + "PASS") if success else (Colors.RED + "FAIL")
         print("    [ " + result + Colors.DEFAULT + " ] " + test.description, end='')
-        indent = 11 * ' '
+        indent = 11 * " "
         if event_type == 'testcase_end':
             print(" {colors.GRAY}({duration:.3f} s){colors.DEFAULT}".format(
                 duration=event['duration'], colors=Colors))
@@ -299,16 +299,16 @@ class TestEmitter(Observer):
 
         if values:
             destlen = offsets[-1] + 3
-            line = [' '] * destlen
+            line = [" "] * destlen
             for o in offsets[:len(values)]:
-                line[o] = '│'
+                line[o] = "│"
             yield "".join(line).rstrip()
             for i, v in reversed(list(enumerate(values))):
                 lines = v.split('\n')
-                line[offsets[i]] = '└'
-                line[offsets[i] + 1:] = ['─'] * (destlen - (offsets[i] + 1))
+                line[offsets[i]] = "└"
+                line[offsets[i] + 1:] = ["─"] * (destlen - (offsets[i] + 1))
                 yield "".join(line) + " " + lines[0]
-                line[offsets[i]:] = [' '] * (destlen - offsets[i])
+                line[offsets[i]:] = [" "] * (destlen - offsets[i])
                 for l in lines[1:]:
                     yield "".join(line) + " " + l
 
@@ -351,7 +351,7 @@ class SummaryEmitter(Observer):
             self.module_fail_counter += 1
 
     def print_summary(self):
-        print("\n  Run summary:\n")
+        print("")
         print((
             "  ┌──────────┬────────────┬────────────┬────────────┐\n"
             "  │          │       Pass │       Fail │      Total │\n"
