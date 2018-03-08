@@ -45,13 +45,27 @@ void _scu_handle_failure(const char *file, int line, const char *assert_method, 
 static inline void __attribute__((used))
 _scu_assert_equal_int(const char *file, int line, const char *assert_method, const char *actual_str, const char *expected_str, unsigned long long actual, unsigned long long expected, size_t actual_size, size_t expected_size, bool invert, bool is_fatal)
 {
-	if ((actual == expected) ^ invert)
+	#define MASK(size) \
+		size < 8 ? (1ULL << (size * 8)) - 1 : ~0ULL
+
+	unsigned long long actual_mask = MASK(actual_size);
+	unsigned long long expected_mask = MASK(expected_size);
+
+	#undef MASK
+
+	if (((actual & actual_mask) == (expected & expected_mask)) ^ invert)
 		return;
+
+	#define IS_NEGATIVE(value, size) \
+		value & (1LLU << ((size * 8) - 1))
 
 	char actual_buf[64];
 	char expected_buf[64];
-	_scu_prettyprint_integer_value(actual_buf, sizeof(actual_buf), actual, actual_size);
-	_scu_prettyprint_integer_value(expected_buf, sizeof(expected_buf), expected, expected_size);
+	_scu_prettyprint_integer_value(actual_buf, sizeof(actual_buf), actual, actual_mask, IS_NEGATIVE(actual, actual_size));
+	_scu_prettyprint_integer_value(expected_buf, sizeof(expected_buf), expected, expected_mask, IS_NEGATIVE(expected, expected_size));
+
+	#undef IS_NEGATIVE
+
 	_scu_handle_failure(file, line, assert_method, NULL, actual_str, expected_str, actual_buf, expected_buf, is_fatal);
 }
 

@@ -4,11 +4,9 @@
 #include <stdio.h>
 
 static inline void __attribute__((used))
-_scu_prettyprint_integer_value(char *buf, size_t size, unsigned long long value, size_t value_size)
+_scu_prettyprint_integer_value(char *buf, size_t size, unsigned long long value, unsigned long long mask, bool negative)
 {
-	unsigned long long mask = value_size < 8 ? (1ULL << (value_size * 8)) - 1 : ~0ULL;
-
-	if (value & (1LLU << ((value_size * 8) - 1))) {
+	if (negative) {
 		snprintf(buf, size, "%llu (0x%llx == %lld)", value & mask, value & mask, value | ~mask);
 	} else {
 		snprintf(buf, size, "%llu (0x%llx)", value & mask, value & mask);
@@ -74,6 +72,8 @@ _scu_prettyprint_bytes_value(char *buf, size_t size, const void *value, size_t v
 			PUT_CHAR('\n');
 		}
 	}
+
+	#undef PUT_CHAR
 }
 
 #endif
