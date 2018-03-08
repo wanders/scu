@@ -101,6 +101,13 @@ SCU_TEST(mem_equal, "Assert memory equality")
 SCU_TEST(mem_equal_fail, "Assert memory equality failure")
 {
 	SCU_ASSERT_MEM_EQUAL("foo", "bar", 3);
+	unsigned char a[20];
+	unsigned char b[20];
+	for (size_t i = 0; i < 20; i++) {
+		a[i] = i;
+		b[i] = 128 - i;
+	}
+	SCU_ASSERT_MEM_EQUAL(a, b, 20);
 }
 
 SCU_TEST(string_equal, "Assert string equality")

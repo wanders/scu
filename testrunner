@@ -277,13 +277,13 @@ class TestEmitter(Observer):
                 duration=event['duration'], colors=Colors))
             if not success:
                 for failure in event['failures']:
-                    print(indent + "@ {file}:{line}".format(**failure))
-                    if failure['message']:
-                        print(indent + "* " + failure['message'])
                     names = [v['name'] for v in failure['assert_method_values']]
                     values = [v['value'] for v in failure['assert_method_values'] if 'value' in v]
-                    for l in self.pretty_assert(failure['assert_method'], names, values):
+                    print(indent + "? " + Colors.CYAN + failure['assert_method'] + Colors.DEFAULT + "(" + ", ".join(names) + ") @ {file}:{line}".format(**failure))
+                    for l in self.pretty_assert_values(len(failure['assert_method']), names, values):
                         print(indent + "  " + l)
+                    if failure['message']:
+                        print(indent + "* " + failure['message'])
         elif event_type == 'testcase_error':
             print('')
             print(indent + "! " + Colors.RED + event['message'] + Colors.DEFAULT)
@@ -292,12 +292,11 @@ class TestEmitter(Observer):
                 for line in f:
                     print(indent + "> " + line, end='')
 
-    def pretty_assert(self, method, names, values):
-        offsets = [len(method) + 1]
+    def pretty_assert_values(self, start_offset, names, values):
+        offsets = [start_offset + 1]
         for v in names:
             offsets.append(offsets[-1] + len(v) + 2)
 
-        yield Colors.CYAN + method + Colors.DEFAULT + "(" + ", ".join(names) + ")"
         if values:
             destlen = offsets[-1] + 3
             line = [' '] * destlen
@@ -305,9 +304,13 @@ class TestEmitter(Observer):
                 line[o] = '│'
             yield "".join(line).rstrip()
             for i, v in reversed(list(enumerate(values))):
+                lines = v.split('\n')
                 line[offsets[i]] = '└'
                 line[offsets[i] + 1:] = ['─'] * (destlen - (offsets[i] + 1))
-                yield "".join(line) + " " + v
+                yield "".join(line) + " " + lines[0]
+                line[offsets[i]:] = [' '] * (destlen - offsets[i])
+                for l in lines[1:]:
+                    yield "".join(line) + " " + l
 
 
 class SummaryEmitter(Observer):

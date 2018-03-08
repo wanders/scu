@@ -107,8 +107,15 @@ _scu_assert_equal_memory(const char *file, int line, const char *assert_method, 
 	if ((memcmp(actual, expected, size) == 0) ^ invert)
 		return;
 
-	char actual_buf[256];
-	char expected_buf[256];
+	#define CHARS_PER_LINE 66
+	#define MAX_LINES 10
+	#define BUFFER_SIZE (MAX_LINES * CHARS_PER_LINE)
+	char actual_buf[BUFFER_SIZE];
+	char expected_buf[BUFFER_SIZE];
+	#undef CHARS_PER_LINE
+	#undef MAX_LINES
+	#undef BUFFER_SIZE
+
 	/* TODO: For overlong strings find the (first) section where they differ */
 	_scu_prettyprint_bytes_value(actual_buf, sizeof(actual_buf), actual, size);
 	_scu_prettyprint_bytes_value(expected_buf, sizeof(expected_buf), expected, size);
