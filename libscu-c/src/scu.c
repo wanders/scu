@@ -49,7 +49,7 @@ static size_t _scu_module_num_tests;
 static int _scu_cmd_fd;
 
 static void
-_scu_flush_json()
+_scu_flush_json(void)
 {
 	write(_scu_cmd_fd, "\n", 1);
 }
@@ -64,7 +64,7 @@ _scu_output_module_list(const char *modulename)
 	json_object_key(_scu_cmd_fd, "name");
 	json_string(_scu_cmd_fd, modulename);
 	json_object_end(_scu_cmd_fd);
-	_scu_flush_json(_scu_cmd_fd);
+	_scu_flush_json();
 }
 
 static void
@@ -94,7 +94,7 @@ _scu_output_test_list(int line, const char *name, const char *description, const
 	}
 	json_array_end(_scu_cmd_fd);
 	json_object_end(_scu_cmd_fd);
-	_scu_flush_json(_scu_cmd_fd);
+	_scu_flush_json();
 }
 
 static void
@@ -107,16 +107,16 @@ _scu_output_setup_start(const char *filename)
 	json_object_key(_scu_cmd_fd, "output");
 	json_string(_scu_cmd_fd, filename);
 	json_object_end(_scu_cmd_fd);
-	_scu_flush_json(_scu_cmd_fd);
+	_scu_flush_json();
 }
 static void
-_scu_output_setup_end()
+_scu_output_setup_end(void)
 {
 	json_object_start(_scu_cmd_fd);
 	json_object_key(_scu_cmd_fd, "event");
 	json_string(_scu_cmd_fd, "setup_end");
 	json_object_end(_scu_cmd_fd);
-	_scu_flush_json(_scu_cmd_fd);
+	_scu_flush_json();
 }
 
 static void
@@ -129,16 +129,16 @@ _scu_output_teardown_start(const char *filename)
 	json_object_key(_scu_cmd_fd, "output");
 	json_string(_scu_cmd_fd, filename);
 	json_object_end(_scu_cmd_fd);
-	_scu_flush_json(_scu_cmd_fd);
+	_scu_flush_json();
 }
 static void
-_scu_output_teardown_end()
+_scu_output_teardown_end(void)
 {
 	json_object_start(_scu_cmd_fd);
 	json_object_key(_scu_cmd_fd, "event");
 	json_string(_scu_cmd_fd, "teardown_end");
 	json_object_end(_scu_cmd_fd);
-	_scu_flush_json(_scu_cmd_fd);
+	_scu_flush_json();
 }
 
 static void
@@ -157,7 +157,7 @@ _scu_output_test_start(int idx, const char *name, const char *filename)
 	json_object_key(_scu_cmd_fd, "output");
 	json_string(_scu_cmd_fd, filename);
 	json_object_end(_scu_cmd_fd);
-	_scu_flush_json(_scu_cmd_fd);
+	_scu_flush_json();
 }
 
 static void
@@ -216,7 +216,7 @@ _scu_output_test_end(int idx, bool success, size_t asserts,
 	json_real(_scu_cmd_fd, cpu_time);
 	_scu_output_test_failures(num_failures, failures);
 	json_object_end(_scu_cmd_fd);
-	_scu_flush_json(_scu_cmd_fd);
+	_scu_flush_json();
 }
 
 static void
@@ -238,7 +238,7 @@ _scu_output_test_error(const char *file, int line, const char *msg)
 	json_object_key(_scu_cmd_fd, "crash");
 	json_true(_scu_cmd_fd);
 	json_object_end(_scu_cmd_fd);
-	_scu_flush_json(_scu_cmd_fd);
+	_scu_flush_json();
 }
 
 static void

@@ -1,4 +1,4 @@
-CFLAGS:=-Wall -Werror -I.
+CFLAGS:=-Wall -Werror -I. -Wstrict-prototypes -Wmissing-prototypes
 
 .PHONY: clean
 
