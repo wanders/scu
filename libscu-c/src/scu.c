@@ -387,8 +387,8 @@ typedef struct {
 } _scu_arguments;
 
 static struct argp_option options[] = {
-    {"list", 'l', 0, 0, "list available test cases"},
-    {"run", 'r', 0, 0, "run the test cases identified by the supplied indices"},
+    {"list", 'l', 0, 0, "list available test cases", 0},
+    {"run", 'r', 0, 0, "run the test cases identified by the supplied indices", 0},
     {0}};
 
 static error_t
@@ -431,7 +431,8 @@ parse_opt(int key, char *arg, struct argp_state *state)
 	return 0;
 }
 
-static struct argp argp = {options, parse_opt, 0, SCU_DOCUMENTATION};
+static struct argp argp = {
+    options, parse_opt, 0, SCU_DOCUMENTATION, 0, 0, 0};
 
 /* Main function */
 
