@@ -413,8 +413,10 @@ parse_opt(int key, char *arg, struct argp_state *state)
 			errno = 0;
 			char *endptr = NULL;
 			long int idx = strtol(arg, &endptr, 10);
-			if (endptr == arg || errno != 0 || idx < 0 || idx >= _scu_module_num_tests)
+			if (endptr == arg || errno != 0 || idx < 0 ||
+			    (size_t)idx >= _scu_module_num_tests) {
 				argp_error(state, "invalid index: %s", arg);
+			}
 			parsed_args->test_indices[parsed_args->num_tests++] = idx;
 			break;
 		}
