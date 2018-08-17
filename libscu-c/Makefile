@@ -1,4 +1,4 @@
-CFLAGS:=-Wall -Wextra -Werror -I. -Wstrict-prototypes -Wmissing-prototypes
+CFLAGS:=-Wall -Wextra -Werror -I. -std=gnu99 -Wstrict-prototypes -Wmissing-prototypes
 
 .PHONY: clean
 
