@@ -233,8 +233,9 @@ class TestModuleCollector(Observer):
 
 class TestEmitter(Observer):
 
-    def __init__(self):
+    def __init__(self, verbose):
         self.current_test = None
+        self.print_output = verbose
 
     def handle_module_start(self, module, event):
         print("  {name}".format(name=module.name))
@@ -288,7 +289,7 @@ class TestEmitter(Observer):
             print("           ! " + event['message'])
             if 'file' in event and 'line' in event:
                 print("             @ {file}:{line}".format(**event))
-        if not success:
+        if self.print_output or not success:
             with open(test.output_file_path) as f:
                 for line in f:
                     print("           > " + line, end='')
@@ -462,7 +463,13 @@ if __name__ == '__main__':
     parser.add_argument('-g', '--gdb', action='store_true', help="gdb compatibility mode")
     parser.add_argument('-v', '--valgrind', action='store_true', help="valgrind compatibility mode")
     parser.add_argument('-j', '--jobs', default=cpu_count(), type=int, help="number of jobs to run simultaneously")
+    parser.add_argument('-p', '--verbose', default=False, action='store_true', help="print test output always")
     args = parser.parse_args()
+
+    # Allow environment var override for verbose, because sometimes it's hard to
+    # funnel arguments through build systems.
+    if os.getenv('SCU_VERBOSE'):
+        args.verbose = True
 
     # Create runner
     runner = Runner(args.module, args.jobs)
@@ -492,7 +499,7 @@ if __name__ == '__main__':
 
     # Set up observers
     buffered_emitter = BufferedEventEmitter()
-    buffered_emitter.register(TestEmitter())
+    buffered_emitter.register(TestEmitter(args.verbose))
     buffered_emitter.register(TestCleaner())
 
     summary_emitter = SummaryEmitter()
