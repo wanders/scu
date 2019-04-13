@@ -122,43 +122,43 @@ class EventEmitter(object):
 
 class BufferedEventEmitter(EventEmitter):
 
-        def __init__(self):
-            super(BufferedEventEmitter, self).__init__()
-            self.current_module = None
-            self.buffered_events = defaultdict(list)
-            self.finished_modules = []
+    def __init__(self):
+        super(BufferedEventEmitter, self).__init__()
+        self.current_module = None
+        self.buffered_events = defaultdict(list)
+        self.finished_modules = []
 
-        def call(self, module, event):
-            if event['event'] == 'module_start':
-                self.handle_module_start(module)
+    def call(self, module, event):
+        if event['event'] == 'module_start':
+            self.handle_module_start(module)
 
-            if module == self.current_module:
-                self.emit(module, event)
+        if module == self.current_module:
+            self.emit(module, event)
+        else:
+            self.buffered_events[module].append(event)
+
+        if event['event'] == 'module_end':
+            self.handle_module_end(module)
+
+    def handle_module_start(self, module):
+        if not self.current_module:
+            self.current_module = module
+
+    def handle_module_end(self, module):
+        if module == self.current_module:
+            while self.finished_modules:
+                next_module = self.finished_modules.pop()
+                for e in self.buffered_events.pop(next_module):
+                    self.emit(next_module, e)
+            if self.buffered_events:
+                next_module, events = self.buffered_events.popitem()
+                self.current_module = next_module
+                for e in events:
+                    self.emit(next_module, e)
             else:
-                self.buffered_events[module].append(event)
-
-            if event['event'] == 'module_end':
-                self.handle_module_end(module)
-
-        def handle_module_start(self, module):
-            if not self.current_module:
-                self.current_module = module
-
-        def handle_module_end(self, module):
-            if module == self.current_module:
-                while self.finished_modules:
-                    next_module = self.finished_modules.pop()
-                    for e in self.buffered_events.pop(next_module):
-                        self.emit(next_module, e)
-                if self.buffered_events:
-                    next_module, events = self.buffered_events.popitem()
-                    self.current_module = next_module
-                    for e in events:
-                        self.emit(next_module, e)
-                else:
-                    self.current_module = None
-            else:
-                self.finished_modules.append(module)
+                self.current_module = None
+        else:
+            self.finished_modules.append(module)
 
 
 class Runner(EventEmitter):
