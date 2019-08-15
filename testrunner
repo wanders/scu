@@ -287,6 +287,11 @@ class TestEmitter(Observer):
             "    [ {result}{colors.DEFAULT} ] {desc}"
             .format(desc=test.description, result=result, colors=Colors), end=''
         )
+        siz = os.path.getsize(test.output_file_path)
+        if siz > 0:
+            print(" {colors.GRAY}({siz} bytes of output generated){colors.DEFAULT}"
+                  .format(siz=siz, colors=Colors), end='')
+
         if event_type == 'testcase_end':
             print(
                 " {colors.GRAY}({event[duration]:.3f} s){colors.DEFAULT}"
