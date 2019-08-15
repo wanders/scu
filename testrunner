@@ -520,6 +520,9 @@ class GDBServer(Wrapper):
 
 if __name__ == '__main__':
     # Parse arguments
+
+    show_output_default = os.getenv("SCU_SHOW_OUTPUT", "") not in ("", "0")
+
     parser = ArgumentParser(description="Runs SCU test modules")
     parser.add_argument('module', nargs='+', help="path to test module")
     parser.add_argument('--name', action=FilterAction, default=[], help="filter test cases by name")
@@ -528,7 +531,7 @@ if __name__ == '__main__':
     parser.add_argument('-g', '--gdb', action='store_true', help="gdb compatibility mode")
     parser.add_argument('-v', '--valgrind', action='store_true', help="valgrind compatibility mode")
     parser.add_argument('-j', '--jobs', default=cpu_count(), type=int, help="number of jobs to run simultaneously")
-    parser.add_argument('--show-output', action='store_true', help="show test stdout/err")
+    parser.add_argument('--show-output', action='store_true', default=show_output_default, help="show test stdout/err")
     args = parser.parse_args()
 
     # Create runner
