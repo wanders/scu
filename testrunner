@@ -5,6 +5,7 @@ from __future__ import print_function
 import json
 import os
 import sys
+import time
 
 from argparse import ArgumentParser, Action
 from collections import defaultdict
@@ -203,9 +204,16 @@ class Runner(EventEmitter):
             m.reset_status()
 
     def handle_events(self, modules):
+        periodic_next = time.time() + 0.1
         while True:
             # Attempt to read from all running modules
-            rs, _, _ = select(modules, [], [])
+            rs, _, _ = select(modules, [], [], 0.1)
+            if time.time() > periodic_next:
+                periodic_next += 0.1
+                for m in modules:
+                    self.emit(m, {
+                        'event': 'periodic'
+                    })
             for r in rs:
                 # Handle all pending events
                 for event in r.read_events():
@@ -244,10 +252,46 @@ def hat_escape(data):
     return "".join(r)
 
 
+class TestOutputPrinter(Observer):
+    def __init__(self):
+        self.modulestate = {}
+
+    def handle_testcase_start(self, module, event):
+        prefix = module.tests[event['index']].description
+        output_file = open(event['output'], 'rb')
+        self.modulestate[module] = (prefix, output_file)
+        self._emit_output(*self.modulestate[module])
+
+    def handle_periodic(self, module, event):
+        if module in self.modulestate:
+            self._emit_output(*self.modulestate[module])
+
+    def handle_testcase_end(self, module, event):
+        self._emit_output(*self.modulestate[module])
+        prefix, output_file = self.modulestate[module]
+        del self.modulestate[module]
+        output_file.close()
+
+    def _emit_output(self, prefix, output_file):
+        pos = output_file.tell()
+        # Seek to current position clears EOF state in case there is more data
+        output_file.seek(pos)
+        data = output_file.read()
+        if data:
+            if pos == 0:
+                print("    [      ] " + prefix)
+            lines = data.split(b"\n")
+            for line in lines:
+                line = line.decode("utf-8", "replace")
+                print("           {colors.GRAY}>{colors.DEFAULT} {line}"
+                      .format(line=hat_escape(line), colors=Colors))
+
+
 class TestEmitter(Observer):
 
-    def __init__(self):
+    def __init__(self, show_output):
         self.current_test = None
+        self.show_output = show_output
 
     def handle_module_start(self, module, event):
         print("  {name}".format(name=module.name))
@@ -306,7 +350,7 @@ class TestEmitter(Observer):
             print("           ! " + event['message'])
             if 'file' in event and 'line' in event:
                 print("             @ {file}:{line}".format(**event))
-        if not success:
+        if not self.show_output and not success:
             with open(test.output_file_path, "rb") as f:
                 for line in f:
                     if line.endswith(b"\n"):
@@ -484,6 +528,7 @@ if __name__ == '__main__':
     parser.add_argument('-g', '--gdb', action='store_true', help="gdb compatibility mode")
     parser.add_argument('-v', '--valgrind', action='store_true', help="valgrind compatibility mode")
     parser.add_argument('-j', '--jobs', default=cpu_count(), type=int, help="number of jobs to run simultaneously")
+    parser.add_argument('--show-output', action='store_true', help="show test stdout/err")
     args = parser.parse_args()
 
     # Create runner
@@ -514,7 +559,9 @@ if __name__ == '__main__':
 
     # Set up observers
     buffered_emitter = BufferedEventEmitter()
-    buffered_emitter.register(TestEmitter())
+    if args.show_output:
+        buffered_emitter.register(TestOutputPrinter())
+    buffered_emitter.register(TestEmitter(args.show_output))
     buffered_emitter.register(TestCleaner())
 
     summary_emitter = SummaryEmitter()
