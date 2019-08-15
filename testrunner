@@ -20,6 +20,7 @@ class Colors:
     RED = "\x1b[1;31m"
     GREEN = "\x1b[1;32m"
     DEFAULT = "\x1b[0;39m"
+    REVERSE = "\x1b[7m"
 
 
 class TestCase:
@@ -231,6 +232,18 @@ class TestModuleCollector(Observer):
         module.name = event['name']
 
 
+def hat_escape(data):
+    r = []
+    for c in data:
+        if ord(c) < ord(' '):
+            r.append("{colors.REVERSE}^{c}{colors.DEFAULT}"
+                     .format(c=chr(ord("@") + ord(c)),
+                             colors=Colors))
+        else:
+            r.append(c)
+    return "".join(r)
+
+
 class TestEmitter(Observer):
 
     def __init__(self):
@@ -289,9 +302,13 @@ class TestEmitter(Observer):
             if 'file' in event and 'line' in event:
                 print("             @ {file}:{line}".format(**event))
         if not success:
-            with open(test.output_file_path) as f:
+            with open(test.output_file_path, "rb") as f:
                 for line in f:
-                    print("           > " + line, end='')
+                    if line.endswith(b"\n"):
+                        line = line[:-1]
+                    line = line.decode("utf-8", "replace")
+                    print("           {colors.GRAY}>{colors.DEFAULT} {line}"
+                          .format(line=hat_escape(line), colors=Colors))
 
 
 class SummaryEmitter(Observer):

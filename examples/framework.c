@@ -58,6 +58,7 @@ SCU_TEST(print_to_stdout, "Print to stdout")
 {
 	printf("Output some text...\n");
 	printf("...and some more!\n");
+	printf("...and some funny chars: \x01 \x09\n");
 	SCU_ASSERT(true);
 }
 
