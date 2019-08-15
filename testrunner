@@ -24,6 +24,13 @@ class Colors:
     REVERSE = "\x1b[7m"
 
 
+def get_dir(path):
+    d = os.path.dirname(path)
+    if d == '':
+        return '.'
+    return d
+
+
 class TestCase:
 
     def __init__(self, name=None, description=None, tags=[], **kwargs):
@@ -50,14 +57,14 @@ class TestModule:
 
     def list(self):
         args = [os.path.abspath(self.module_path), '--list']
-        self.proc = Popen(args, stdout=PIPE)
+        self.proc = Popen(args, stdout=PIPE, cwd=get_dir(self.module_path))
 
     def run(self, test_indices, wrapper):
         args = []
         args.extend([os.path.abspath(self.module_path), '--run'])
         args.extend(map(str, test_indices))
         args = wrapper.get_args(args)
-        self.proc = Popen(args, stdout=PIPE)
+        self.proc = Popen(args, stdout=PIPE, cwd=get_dir(self.module_path))
         flags = fcntl(self.fileno(), F_GETFL)
         fcntl(self.fileno(), F_SETFL, flags | os.O_NONBLOCK)
 
