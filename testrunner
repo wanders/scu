@@ -4,6 +4,8 @@ from __future__ import print_function
 
 import json
 import os
+import pipes
+import shlex
 import sys
 import time
 
@@ -497,16 +499,25 @@ class Wrapper(object):
 class Valgrind(Wrapper):
     log_path = property(lambda self:
                         "valgrind.{}.log".format(os.path.basename(self.module.module_path)))
+    extra_opts = property(lambda self: self.mainargs.valgrind_opt)
 
     def get_args(self, args):
-        return ['valgrind', "--log-file={}".format(self.log_path)] + args
+        outargs = ['valgrind', "--log-file={}".format(self.log_path)]
+        outargs += self.extra_opts
+        outargs += args
+        return outargs
 
     def get_message(self):
-        return ["VALGRIND MODE ENABLED",
+        mesg = ["VALGRIND MODE ENABLED",
                 "",
                 "The test process will be run under Valgrind. Any errors found will be logged to:",
                 "\t{}".format(self.log_path),
                 ""]
+        if self.extra_opts:
+            mesg += ["Extra options added:",
+                     "\t{}".format(" ".join(map(pipes.quote, self.extra_opts))),
+                     ""]
+        return mesg
 
 
 class GDBServer(Wrapper):
@@ -530,6 +541,7 @@ if __name__ == '__main__':
     # Parse arguments
 
     show_output_default = os.getenv("SCU_SHOW_OUTPUT", "") not in ("", "0")
+    valgrind_opts_default = shlex.split(os.getenv("SCU_VALGRIND_OPTS", ""))
 
     parser = ArgumentParser(description="Runs SCU test modules")
     parser.add_argument('module', nargs='+', help="path to test module")
@@ -538,6 +550,8 @@ if __name__ == '__main__':
     parser.add_argument('--exclude', action='store_true', help="negates the following filter option")
     parser.add_argument('-g', '--gdb', action='store_true', help="gdb compatibility mode")
     parser.add_argument('-v', '--valgrind', action='store_true', help="valgrind compatibility mode")
+    parser.add_argument('--valgrind-opt', action='append', default=valgrind_opts_default,
+                        help="extra option to pass to valgrind")
     parser.add_argument('-j', '--jobs', default=cpu_count(), type=int, help="number of jobs to run simultaneously")
     parser.add_argument('--show-output', action='store_true', default=show_output_default, help="show test stdout/err")
     args = parser.parse_args()
