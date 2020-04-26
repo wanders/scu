@@ -189,14 +189,14 @@ class Runner(EventEmitter):
             job = self.handle_events(running_jobs)
             running_jobs.remove(job)
 
-    def run_modules(self, tests_to_run, wrapperclass):
+    def run_modules(self, tests_to_run, wrapperclass, args):
         self.reset_modules()
         pending_jobs = tests_to_run[:]
         running_jobs = []
         while pending_jobs or running_jobs:
             while len(running_jobs) < self.simultaneous_jobs and pending_jobs:
                 job, indices = pending_jobs.pop()
-                wrapper = wrapperclass(job)
+                wrapper = wrapperclass(job, args)
                 job.run(indices, wrapper)
                 self.emit(job, {
                     'event': 'module_start',
@@ -483,8 +483,9 @@ class FilterAction(Action):
 
 
 class Wrapper(object):
-    def __init__(self, module):
+    def __init__(self, module, mainargs):
         self.module = module
+        self.mainargs = mainargs
 
     def get_args(self, args):
         return args
@@ -587,7 +588,7 @@ if __name__ == '__main__':
         wrapperclass = Wrapper
 
     # Run selected tests
-    runner.run_modules(tests_to_run, wrapperclass)
+    runner.run_modules(tests_to_run, wrapperclass, args)
 
     # Print summary
     summary_emitter.print_summary()
