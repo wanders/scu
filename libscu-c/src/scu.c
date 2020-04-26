@@ -469,5 +469,6 @@ main(int argc, char *argv[])
 		run_tests(args.num_tests, args.test_indices);
 	}
 
+	free(_scu_module_tests);
 	return 0;
 }
