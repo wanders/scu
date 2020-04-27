@@ -14,6 +14,7 @@
 #ifdef SCU_HAVE_VALGRIND
 #include <valgrind/valgrind.h>
 #else
+#define VALGRIND_COUNT_ERRORS 0
 #define VALGRIND_PRINTF(format, ...)
 #endif
 
@@ -200,7 +201,8 @@ _scu_output_test_failures(size_t num, _scu_failure *failures)
 static void
 _scu_output_test_end(int idx, bool success, size_t asserts,
                      double mono_time, double cpu_time,
-                     size_t num_failures, _scu_failure *failures)
+                     size_t num_failures, _scu_failure *failures,
+                     size_t valgrind_errors)
 {
 	json_object_start(_scu_cmd_fd);
 	json_object_key(_scu_cmd_fd, "event");
@@ -221,6 +223,11 @@ _scu_output_test_end(int idx, bool success, size_t asserts,
 	json_object_key(_scu_cmd_fd, "cpu_time");
 	json_real(_scu_cmd_fd, cpu_time);
 	_scu_output_test_failures(num_failures, failures);
+	if (valgrind_errors) {
+		json_separator(_scu_cmd_fd);
+		json_object_key(_scu_cmd_fd, "valgrind_errors");
+		json_integer(_scu_cmd_fd, valgrind_errors);
+	}
 	json_object_end(_scu_cmd_fd);
 	_scu_flush_json();
 }
@@ -330,6 +337,8 @@ _scu_run_test(int idx)
 
 	struct timespec start_mono_time, end_mono_time, start_cpu_time, end_cpu_time;
 
+	unsigned valgrind_errors_before = VALGRIND_COUNT_ERRORS;
+
 	_scu_before_each();
 
 	clock_gettime(CLOCK_MONOTONIC, &start_mono_time);
@@ -351,10 +360,14 @@ _scu_run_test(int idx)
 
 	_scu_after_each();
 
-	_scu_output_test_end(idx, success, asserts,
+	unsigned valgrind_errors_after = VALGRIND_COUNT_ERRORS;
+
+	unsigned valgrind_error_count = valgrind_errors_after - valgrind_errors_before;
+
+	_scu_output_test_end(idx, success && !valgrind_error_count, asserts,
 	                     _scu_get_time_diff(start_mono_time, end_mono_time),
 	                     _scu_get_time_diff(start_cpu_time, end_cpu_time),
-	                     num_failures, _failures);
+	                     num_failures, _failures, valgrind_error_count);
 }
 
 static void
