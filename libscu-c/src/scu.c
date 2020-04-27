@@ -11,6 +11,12 @@
 #include "json.h"
 #include "scu.h"
 
+#ifdef SCU_HAVE_VALGRIND
+#include <valgrind/valgrind.h>
+#else
+#define VALGRIND_PRINTF(format, ...)
+#endif
+
 #define SCU_DOCUMENTATION "SCU test module\vExamples:\n  ./test --list\n  ./test --run 0 1 2"
 
 #define SCU_OUTPUT_FILENAME_TEMPLATE "/tmp/scu.XXXXXX"
@@ -317,6 +323,8 @@ _scu_run_test(int idx)
 
 	char filename[SCU_OUTPUT_FILENAME_TEMPLATE_SIZE];
 	_scu_redirect_output(filename, sizeof(filename));
+
+	VALGRIND_PRINTF("\n** SCU: Starting test \"%s\" **\n\n", test->name);
 
 	_scu_output_test_start(idx, test->name, filename);
 

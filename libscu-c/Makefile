@@ -1,5 +1,9 @@
 CFLAGS:=-Wall -Wextra -Werror -I. -Wstrict-prototypes -Wmissing-prototypes
 
+ifneq ($(SCU_HAVE_VALGRIND),)
+CFLAGS+=-DSCU_HAVE_VALGRIND=1
+endif
+
 .PHONY: clean
 
 libscu-c.a: src/scu.o
