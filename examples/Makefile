@@ -1,4 +1,4 @@
-TESTCASES:=file framework crash crash-at-shutdown
+TESTCASES:=file framework crash crash-at-shutdown valgrind-error
 
 CFLAGS=-Wall -Wextra -Werror -std=gnu11 -g
 
