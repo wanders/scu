@@ -409,6 +409,9 @@ class SummaryEmitter(Observer):
         if self.has_reported_failing_test[module]:
             self.module_fail_counter += 1
 
+    def is_failure(self):
+        return self.module_fail_counter > 0
+
     def print_summary(self):
         print("\n  Run summary:\n")
         print((
@@ -607,4 +610,4 @@ if __name__ == '__main__':
     # Print summary
     summary_emitter.print_summary()
 
-    sys.exit(summary_emitter.module_fail_counter > 0)
+    sys.exit(summary_emitter.is_failure())
