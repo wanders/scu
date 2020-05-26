@@ -302,8 +302,8 @@ class TestEmitter(Observer):
 
     def handle_module_start(self, module, event):
         print("  {name}".format(name=module.name))
-        for l in event['message']:
-            print("    > {}".format(l))
+        for line in event['message']:
+            print("    > {}".format(line))
 
     def handle_testcase_start(self, module, event):
         self.current_test = module.tests[event['index']]
