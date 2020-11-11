@@ -17,7 +17,7 @@ clean::
 	rm -f $(TESTCASES) $(patsubst %,%.o,$(TESTCASES)) $(patsubst %,valgrind.%.log,$(TESTCASES))
 
 
-LDFLAGS:=-L$(SCU_DIR)/libscu-c/ -lscu-c
+LDFLAGS:=-L$(SCU_DIR)/libscu-c/ -lscu-c -lpthread
 
 ifeq ($(shell uname), Darwin)
 	# libargp may be installed with homebrew
