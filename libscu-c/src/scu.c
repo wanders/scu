@@ -13,6 +13,7 @@
 
 #ifdef SCU_HAVE_VALGRIND
 #include <valgrind/valgrind.h>
+#include <valgrind/memcheck.h>
 #else
 #define VALGRIND_COUNT_ERRORS 0
 #define VALGRIND_PRINTF(format, ...)
@@ -202,7 +203,7 @@ static void
 _scu_output_test_end(int idx, bool success, size_t asserts,
                      double mono_time, double cpu_time,
                      size_t num_failures, _scu_failure *failures,
-                     size_t valgrind_errors)
+                     size_t valgrind_errors, size_t valgrind_leaks)
 {
 	json_object_start(_scu_cmd_fd);
 	json_object_key(_scu_cmd_fd, "event");
@@ -227,6 +228,11 @@ _scu_output_test_end(int idx, bool success, size_t asserts,
 		json_separator(_scu_cmd_fd);
 		json_object_key(_scu_cmd_fd, "valgrind_errors");
 		json_integer(_scu_cmd_fd, valgrind_errors);
+	}
+	if (valgrind_leaks) {
+		json_separator(_scu_cmd_fd);
+		json_object_key(_scu_cmd_fd, "valgrind_leaks");
+		json_integer(_scu_cmd_fd, valgrind_leaks);
 	}
 	json_object_end(_scu_cmd_fd);
 	_scu_flush_json();
@@ -264,6 +270,30 @@ _scu_redirect_output(char *filename, size_t len)
 	dup2(out, STDERR_FILENO);
 	setvbuf(stdout, NULL, _IONBF, 0);
 	setvbuf(stderr, NULL, _IONBF, 0);
+}
+
+static unsigned _scu_valgrind_leaks (void)
+{
+	unsigned total_leaks = 0;
+
+#if defined SCU_HAVE_VALGRIND && defined SCU_VALGRIND_LEAK_LEVEL
+	unsigned leaked, dubious, reachable, suppressed;
+
+	VALGRIND_DO_QUICK_LEAK_CHECK;
+	VALGRIND_COUNT_LEAKS(leaked, dubious, reachable, suppressed);
+
+	/* Not errorous leaks */
+	(void) reachable;
+	(void) suppressed;
+
+	if (SCU_VALGRIND_LEAK_LEVEL >= 1)
+		total_leaks += leaked;
+
+	if (SCU_VALGRIND_LEAK_LEVEL >= 2)
+		total_leaks += dubious;
+#endif
+
+	return total_leaks;
 }
 
 /* Module actions */
@@ -338,6 +368,7 @@ _scu_run_test(int idx)
 	struct timespec start_mono_time, end_mono_time, start_cpu_time, end_cpu_time;
 
 	unsigned valgrind_errors_before = VALGRIND_COUNT_ERRORS;
+	unsigned valgrind_leaks_before = _scu_valgrind_leaks();
 
 	_scu_before_each();
 
@@ -361,13 +392,18 @@ _scu_run_test(int idx)
 	_scu_after_each();
 
 	unsigned valgrind_errors_after = VALGRIND_COUNT_ERRORS;
+	unsigned valgrind_leaks_after = _scu_valgrind_leaks();
 
 	unsigned valgrind_error_count = valgrind_errors_after - valgrind_errors_before;
+	unsigned valgrind_leak_count = valgrind_leaks_after - valgrind_leaks_before;
 
-	_scu_output_test_end(idx, success && !valgrind_error_count, asserts,
+	success = success && !valgrind_error_count && !valgrind_leak_count;
+
+	_scu_output_test_end(idx, success, asserts,
 	                     _scu_get_time_diff(start_mono_time, end_mono_time),
 	                     _scu_get_time_diff(start_cpu_time, end_cpu_time),
-	                     num_failures, _failures, valgrind_error_count);
+	                     num_failures, _failures, valgrind_error_count,
+	                     valgrind_leak_count);
 }
 
 static void
