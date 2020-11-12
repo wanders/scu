@@ -7,6 +7,10 @@ CFLAGS+=$(SCU_VALGRIND_CFLAGS)
 endif
 endif
 
+ifneq ($(SCU_VALGRIND_LEAK_LEVEL),)
+CFLAGS+=-DSCU_VALGRIND_LEAK_LEVEL=$(SCU_VALGRIND_LEAK_LEVEL)
+endif
+
 .PHONY: clean
 
 libscu-c.a: src/scu.o
