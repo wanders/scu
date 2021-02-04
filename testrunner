@@ -561,6 +561,23 @@ class GDBServer(Wrapper):
                 " (gdb) continue"]
 
 
+def mtime(path):
+    try:
+        return os.stat(path).st_mtime
+    except OSError:
+        return 0
+
+
+def touch(path):
+    try:
+        os.utime(path, None)
+    except OSError:
+        try:
+            open(path, "w").close()
+        except IOError as e:
+            sys.stderr.write("Error creating %r: %s\n" % (path, e))
+
+
 if __name__ == '__main__':
     # Parse arguments
 
@@ -578,6 +595,8 @@ if __name__ == '__main__':
                         help="extra option to pass to valgrind")
     parser.add_argument('-j', '--jobs', default=cpu_count(), type=int, help="number of jobs to run simultaneously")
     parser.add_argument('--show-output', action='store_true', default=show_output_default, help="show test stdout/err")
+    parser.add_argument('--timestampfile', metavar="PATH",
+                        help="only run test modules newer than PATH")
     args = parser.parse_args()
 
     # Create runner
@@ -590,8 +609,16 @@ if __name__ == '__main__':
     runner.deregister(collector)
 
     # Filter tests
+    if args.timestampfile:
+        minmtime = mtime(args.timestampfile)
+    else:
+        minmtime = 0
+
     tests_to_run = []
     for m in runner.modules:
+        if args.timestampfile:
+            if mtime(m.module_path) < minmtime:
+                continue
         indices = set(range(len(m.tests)))
         for p, exclude in args.name:
             s = set(i for i, t in enumerate(m.tests) if fnmatch(t.name, p))
@@ -631,5 +658,8 @@ if __name__ == '__main__':
 
     # Print summary
     summary_emitter.print_summary()
+
+    if args.timestampfile:
+        touch(args.timestampfile)
 
     sys.exit(summary_emitter.is_failure())
