@@ -61,3 +61,11 @@ SCU_TEST(memory_leak, "Memory leak")
 	b[1] = 17;
 	SCU_ASSERT(b[1] == 17);
 }
+
+SCU_TEST(another_memory_leak, "Another memory leak")
+{
+	char *b = malloc(15);
+
+	b[1] = 17;
+	SCU_ASSERT(b[1] == 17);
+}

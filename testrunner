@@ -357,6 +357,9 @@ class TestEmitter(Observer):
             if event.get('valgrind_errors', 0):
                 print("           ! {colors.RED}{vgerrs} valgrind error(s){colors.DEFAULT} reported!"
                       .format(vgerrs=event['valgrind_errors'], colors=Colors))
+            if event.get('valgrind_leaks', 0):
+                print("           ! {colors.RED}{vgerrs}B leaked memory{colors.DEFAULT} reported!"
+                      .format(vgerrs=event['valgrind_leaks'], colors=Colors))
         elif event_type in ('testcase_error', 'module_crash'):
             print('')
             print("           ! " + event['message'])
@@ -386,6 +389,8 @@ class SummaryEmitter(Observer):
         self.has_reported_failing_test = {}
         self.tests_with_valgrind_errors_counter = 0
         self.valgrind_errors_counter = 0
+        self.tests_with_valgrind_leaks_counter = 0
+        self.valgrind_leaks_counter = 0
         self.show_valgrind_stats = False
 
     def handle_module_start(self, module, event):
@@ -403,6 +408,9 @@ class SummaryEmitter(Observer):
         if event.get('valgrind_errors', 0):
             self.tests_with_valgrind_errors_counter += 1
             self.valgrind_errors_counter += event['valgrind_errors']
+        if event.get('valgrind_leaks', 0):
+            self.tests_with_valgrind_leaks_counter += 1
+            self.valgrind_leaks_counter += event['valgrind_leaks']
 
     def handle_testcase_error(self, module, event):
         self.test_counter += 1
@@ -419,7 +427,8 @@ class SummaryEmitter(Observer):
             self.module_fail_counter += 1
 
     def is_failure(self):
-        return self.module_fail_counter > 0 or self.valgrind_errors_counter > 0
+        return self.module_fail_counter > 0 or self.valgrind_errors_counter > 0 or \
+               self.valgrind_leaks_counter > 0
 
     def print_summary(self):
         print("\n  Run summary:\n")
@@ -452,11 +461,15 @@ class SummaryEmitter(Observer):
                 "  | Valgrind           |            |\n"
                 "  +--------------------+------------+\n"
                 "  |            Errors: | {:10} |\n"
+                "  |          Leaks(B): | {:10} |\n"
                 "  | Tests with errors: | {:10} |\n"
+                "  |  Tests with leaks: [ {:10} |\n"
                 "  +--------------------+------------+\n"
             ).format(
                 self.valgrind_errors_counter,
+                self.valgrind_leaks_counter,
                 self.tests_with_valgrind_errors_counter,
+                self.tests_with_valgrind_leaks_counter,
             ))
 
 
