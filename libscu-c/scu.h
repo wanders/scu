@@ -68,8 +68,7 @@ typedef struct {
 
 void _scu_register_testcase(_scu_testcase *);
 
-#define SCU_TAGS(...) \
-	.tags = {__VA_ARGS__}
+#define SCU_TAGS(...) __VA_ARGS__
 
 #define SCU_TEST(name, desc, ...) \
 	static void name(void); \
@@ -84,10 +83,7 @@ void _scu_register_testcase(_scu_testcase *);
 	} \
 	static void __attribute__((constructor)) _scu_register_##name(void) \
 	{ \
-		_Pragma("GCC diagnostic push"); \
-		_Pragma("GCC diagnostic ignored \"-Wmissing-field-initializers\""); \
-		static _scu_testcase tc = {_scu_test_wrapper_##name, __LINE__, #name, (desc), ##__VA_ARGS__}; \
-		_Pragma("GCC diagnostic pop"); \
+		static _scu_testcase tc = {_scu_test_wrapper_##name, __LINE__, #name, (desc), {__VA_ARGS__}}; \
 		_scu_register_testcase(&tc); \
 	} \
 	static void name(void)
