@@ -311,11 +311,28 @@ class TestEmitter(Observer):
     def __init__(self, show_output):
         self.current_test = None
         self.show_output = show_output
+        self.nontestoutput = None
 
     def handle_module_start(self, module, event):
         print("  {name}".format(name=module.name))
         for line in event['message']:
             print("    > {}".format(line))
+
+    def handle_setup_start(self, module, event):
+        assert self.nontestoutput is None
+        self.nontestoutput = event['output']
+
+    def handle_setup_end(self, module, event):
+        assert self.nontestoutput is not None
+        self.nontestoutput = None
+
+    def handle_teardown_start(self, module, event):
+        assert self.nontestoutput is None
+        self.nontestoutput = event['output']
+
+    def handle_teardown_end(self, module, event):
+        assert self.nontestoutput is not None
+        self.nontestoutput = None
 
     def handle_testcase_start(self, module, event):
         self.current_test = module.tests[event['index']]
@@ -340,6 +357,10 @@ class TestEmitter(Observer):
             print("    [ {colors.RED}FAIL{colors.DEFAULT} ]"
                   .format(colors=Colors))
             print("           ! " + event['message'])
+            if self.nontestoutput is not None:
+                print_output_file(self.nontestoutput)
+                self.nontestoutput = None
+
         self.current_test = None
 
     def print_testcase(self, test, event):
