@@ -261,6 +261,20 @@ def hat_escape(data):
     return "".join(r)
 
 
+def print_output_lines(lines):
+    for line in lines:
+        if line.endswith(b"\n"):
+            line = line[:-1]
+        line = line.decode("utf-8", "replace")
+        print("           {colors.GRAY}>{colors.DEFAULT} {line}"
+              .format(line=hat_escape(line), colors=Colors))
+
+
+def print_output_file(path):
+    with open(path, "rb") as f:
+        print_output_lines(f)
+
+
 class TestOutputPrinter(Observer):
     def __init__(self):
         self.modulestate = {}
@@ -289,11 +303,7 @@ class TestOutputPrinter(Observer):
         if data:
             if pos == 0:
                 print("    [      ] " + prefix)
-            lines = data.split(b"\n")
-            for line in lines:
-                line = line.decode("utf-8", "replace")
-                print("           {colors.GRAY}>{colors.DEFAULT} {line}"
-                      .format(line=hat_escape(line), colors=Colors))
+            print_output_lines(data.split(b"\n"))
 
 
 class TestEmitter(Observer):
@@ -363,13 +373,7 @@ class TestEmitter(Observer):
             if 'file' in event and 'line' in event:
                 print("             @ {file}:{line}".format(**event))
         if not self.show_output and not success:
-            with open(test.output_file_path, "rb") as f:
-                for line in f:
-                    if line.endswith(b"\n"):
-                        line = line[:-1]
-                    line = line.decode("utf-8", "replace")
-                    print("           {colors.GRAY}>{colors.DEFAULT} {line}"
-                          .format(line=hat_escape(line), colors=Colors))
+            print_output_file(test.output_file_path)
 
 
 class SummaryEmitter(Observer):
