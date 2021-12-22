@@ -6,8 +6,10 @@ import json
 import os
 import pipes
 import shlex
+import socket
 import sys
 import time
+import xml.etree.ElementTree as ET
 
 from argparse import ArgumentParser, Action
 from collections import defaultdict
@@ -485,6 +487,100 @@ class SummaryEmitter(Observer):
             ))
 
 
+class XMLEmitter(Observer):
+
+    def __init__(self, xml_path):
+        self.xml_path = xml_path
+        self.root = ET.Element("testsuites")
+        self.current_module = None
+        self.current_test = None
+        self.current_test_output = None
+
+    def handle_module_start(self, module, event):
+        assert self.current_module is None
+        self.current_module = ET.SubElement(self.root, "testsuite",
+                                            name=module.module_path,
+                                            hostname=socket.getfqdn(),
+                                            timestamp=time.strftime("%Y-%m-%dT%H:%M:%S"))
+        ET.SubElement(self.current_module, "properties")
+
+    def handle_module_end(self, module, event):
+        self.current_module = None
+
+    def handle_testcase_start(self, module, event):
+        assert self.current_module is not None
+        assert self.current_test is None
+        self.current_test = ET.SubElement(self.current_module, "testcase",
+                                          name=module.tests[event['index']].name,
+                                          classname="%s:%s" % (module.module_path, module.tests[event['index']].name))
+        self.current_test_output = event['output']
+
+    def add_test_output(self):
+        out = ET.SubElement(self.current_test, "system-out")
+        with open(self.current_test_output, "rb") as outfile:
+            outfile.seek(0, 2)
+            siz = outfile.tell()
+            if siz > 768:
+                outfile.seek(-512, 2)
+                prefix = "[truncated (total size was %d bytes)]\n" % siz
+            else:
+                outfile.seek(0)
+                prefix = ""
+            data = "".join(("\\x%02x" % ord(c)) if ord(c) < 32 and c != "\n" else c
+                           for c in outfile.read().decode("utf-8", "replace"))
+            out.text = prefix + data
+
+    def handle_testcase_end(self, module, event):
+        assert self.current_test is not None
+        self.current_test.attrib["time"] = "%.3f" % event['duration']
+
+        for f in event['failures']:
+            ET.SubElement(self.current_test, "failure",
+                          message=f['message'], type="assert")
+
+        self.add_test_output()
+        self.current_test = None
+
+    def handle_testcase_error(self, module, event):
+        ET.SubElement(self.current_test, "error",
+                      message=event['message'], type="internal_testcase_error")
+
+        self.add_test_output()
+        self.current_test = None
+
+    def handle_module_crash(self, module, event):
+        fake_test = ET.SubElement(self.current_module, "testcase",
+                                  name="<No Test>",
+                                  classname="%s:<No Test>" % module.module_path)
+        ET.SubElement(fake_test, "error",
+                      message=event['message'], type="crash")
+        self.current_test = None
+
+    def write_output(self):
+        assert self.root.tag == "testsuites"
+
+        for suite in self.root:
+            assert suite.tag == "testsuite"
+            cases = errors = failures = 0
+            for case in suite:
+                if case.tag == "properties":
+                    continue
+                assert case.tag == "testcase"
+                cases += 1
+                for s in case:
+                    if s.tag == "error":
+                        errors += 1
+                    elif s.tag == "failure":
+                        failures += 1
+            suite.attrib["tests"] = str(cases)
+            suite.attrib["errors"] = str(errors)
+            suite.attrib["failures"] = str(failures)
+
+        doc = ET.ElementTree(xml_emitter.root)
+        with open(self.xml_path, "wb") as out:
+            doc.write(out, encoding="UTF-8", xml_declaration=True)
+
+
 class TestCleaner(Observer):
 
     def __init__(self):
@@ -603,6 +699,7 @@ if __name__ == '__main__':
                         help="extra option to pass to valgrind")
     parser.add_argument('-j', '--jobs', default=cpu_count(), type=int, help="number of jobs to run simultaneously")
     parser.add_argument('--show-output', action='store_true', default=show_output_default, help="show test stdout/err")
+    parser.add_argument('--xml', help="store results to xml file (junitxml)")
     args = parser.parse_args()
 
     # Create runner
@@ -636,6 +733,11 @@ if __name__ == '__main__':
     if args.show_output:
         buffered_emitter.register(TestOutputPrinter())
     buffered_emitter.register(TestEmitter(args.show_output))
+    if args.xml:
+        xml_emitter = XMLEmitter(args.xml)
+        buffered_emitter.register(xml_emitter)
+    else:
+        xml_emitter = None
     buffered_emitter.register(TestCleaner())
 
     summary_emitter = SummaryEmitter()
@@ -656,5 +758,8 @@ if __name__ == '__main__':
 
     # Print summary
     summary_emitter.print_summary()
+
+    if xml_emitter:
+        xml_emitter.write_output()
 
     sys.exit(summary_emitter.is_failure())

@@ -62,6 +62,13 @@ SCU_TEST(print_to_stdout, "Print to stdout")
 	SCU_ASSERT(true);
 }
 
+SCU_TEST(print_lots_to_stdout, "Print lots of output to stdout")
+{
+	for (int i = 0; i < 100; i++)
+		printf("Some output (%d/100)...\n", i);
+	SCU_ASSERT(true);
+}
+
 SCU_TEST(print_to_stdout_fail, "Print to stdout and fail")
 {
 	printf("Output some text...\n");
