@@ -401,9 +401,10 @@ class TestEmitter(Observer):
 
 class SummaryEmitter(Observer):
 
-    def __init__(self):
+    def __init__(self, module_init_failures):
         self.module_counter = 0
         self.module_fail_counter = 0
+        self.module_init_fail_counter = module_init_failures
         self.test_counter = 0
         self.test_fail_counter = 0
         self.assert_counter = 0
@@ -446,7 +447,9 @@ class SummaryEmitter(Observer):
             self.module_fail_counter += 1
 
     def is_failure(self):
-        return self.module_fail_counter > 0 or self.valgrind_errors_counter > 0
+        return any((self.module_fail_counter > 0,
+                    self.valgrind_errors_counter > 0,
+                    self.module_init_fail_counter > 0))
 
     def print_summary(self):
         print("\n  Run summary:\n")
@@ -462,8 +465,8 @@ class SummaryEmitter(Observer):
             "  +----------+------------+------------+------------+\n"
         ).format(
             self.module_counter - self.module_fail_counter,
-            self.module_fail_counter,
-            self.module_counter,
+            self.module_fail_counter + self.module_init_fail_counter,
+            self.module_counter + self.module_init_fail_counter,
             self.test_counter - self.test_fail_counter,
             self.test_fail_counter,
             self.test_counter,
@@ -711,6 +714,18 @@ if __name__ == '__main__':
     runner.list_modules()
     runner.deregister(collector)
 
+    module_init_failures = 0
+    for m in runner.modules:
+        if m.failed:
+            module_init_failures += 1
+            print("  {}".format(m.module_path))
+            print("    > {colors.RED}Module failed to initialize{colors.DEFAULT}"
+                  .format(colors=Colors))
+        elif not m.tests:
+            print("  {name}".format(name=m.name))
+            print("    > Module does not contain any tests"
+                  .format(colors=Colors))
+
     # Filter tests
     tests_to_run = []
     for m in runner.modules:
@@ -740,7 +755,7 @@ if __name__ == '__main__':
         xml_emitter = None
     buffered_emitter.register(TestCleaner())
 
-    summary_emitter = SummaryEmitter()
+    summary_emitter = SummaryEmitter(module_init_failures)
     runner.register(buffered_emitter)
     runner.register(summary_emitter)
 
