@@ -4,7 +4,6 @@ from __future__ import print_function
 
 import json
 import os
-import pipes
 import shlex
 import socket
 import sys
@@ -19,6 +18,11 @@ from multiprocessing import cpu_count
 from select import select
 from subprocess import Popen, PIPE
 
+try:
+    # Available since python 3.3
+    from shlex import quote
+except ImportError:
+    from pipes import quote
 
 class Colors:
     GRAY = "\x1b[1;30m"
@@ -663,7 +667,7 @@ class Valgrind(Wrapper):
                 ""]
         if self.extra_opts:
             mesg += ["Extra options added:",
-                     "\t{}".format(" ".join(map(pipes.quote, self.extra_opts))),
+                     "\t{}".format(" ".join(map(quote, self.extra_opts))),
                      ""]
         return mesg
 
