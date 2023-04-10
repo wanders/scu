@@ -2,7 +2,7 @@
 int
 main(int argc, char **argv)
 {
-	argc = argc;
-	argv = argv;
+	(void) argc;
+	(void) argv;
 	return 1;
 }

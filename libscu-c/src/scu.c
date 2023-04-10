@@ -1,10 +1,10 @@
 #include <argp.h>
 #include <assert.h>
+#include <pthread.h>
 #include <setjmp.h>
 #include <signal.h>
 #include <stdlib.h>
 #include <sys/ioctl.h>
-#include <sys/syscall.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -296,13 +296,13 @@ _scu_get_time_diff(struct timespec startt, struct timespec endt)
 }
 
 static bool _scu_fatal_assert_jmpbuf_valid;
-static pid_t _scu_fatal_assert_allowed_thread_id;
+static pthread_t _scu_fatal_assert_allowed_thread_id;
 static jmp_buf _scu_fatal_assert_jmpbuf;
 
-static pid_t
+static pthread_t
 _scu_get_current_thread_id(void)
 {
-	return syscall(SYS_gettid);
+	return pthread_self();
 }
 
 void

@@ -16,8 +16,17 @@ build: $(TESTCASES)
 clean::
 	rm -f $(TESTCASES) $(patsubst %,%.o,$(TESTCASES)) $(patsubst %,valgrind.%.log,$(TESTCASES))
 
+
+LDFLAGS:=-L$(SCU_DIR)/libscu-c/ -lscu-c -lpthread
+
+ifeq ($(shell uname), Darwin)
+	# libargp may be installed with homebrew
+	#    brew install argp-standalone
+	LDFLAGS+=-largp
+endif
+
 $(TESTCASES): %:%.o $(SCU_DIR)/libscu-c/libscu-c.a
-	$(CC) -o $@ $< -L$(SCU_DIR)/libscu-c/ -lscu-c
+	$(CC) -o $@ $< $(LDFLAGS)
 
 $(SCU_DIR)/libscu-c/libscu-c.a:
 	make -C $(SCU_DIR)/libscu-c
