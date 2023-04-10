@@ -409,7 +409,7 @@ typedef struct {
 
 static struct argp_option options[] = {
     {"list", 'l', 0, 0, "list available test cases", 0},
-    {"run", 'r', 0, 0, "run the test cases identified by the supplied indices", 0},
+    {"run", 'r', 0, 0, "run the test cases identified by the supplied indices, or all if none is supplied", 0},
     {0}};
 
 static error_t
@@ -427,8 +427,11 @@ parse_opt(int key, char *arg, struct argp_state *state)
 		case ARGP_KEY_NO_ARGS:
 			if (!parsed_args->list && !parsed_args->run)
 				argp_usage(state);
-			if (parsed_args->run)
-				argp_error(state, "not enough arguments");
+			if (parsed_args->run) {
+				for (size_t i = 0; i < _scu_module_num_tests; i++) {
+					parsed_args->test_indices[parsed_args->num_tests++] = i;
+				}
+			}
 			break;
 		case ARGP_KEY_ARG: {
 			errno = 0;
