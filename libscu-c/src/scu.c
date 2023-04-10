@@ -442,7 +442,7 @@ parse_opt(int key, char *arg, struct argp_state *state)
 			break;
 		}
 		case ARGP_KEY_END:
-			if (!parsed_args->run && parsed_args->num_tests > 0)
+			if (!parsed_args->run && state->arg_num > 0)
 				argp_error(state, "extraneous arguments");
 			break;
 		default:
