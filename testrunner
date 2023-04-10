@@ -650,7 +650,7 @@ class Valgrind(Wrapper):
     extra_opts = property(lambda self: self.mainargs.valgrind_opt)
 
     def get_args(self, args):
-        outargs = ['valgrind', "--log-file={}".format(self.log_path)]
+        outargs = ['valgrind', "--log-file={}".format(self.log_path), "--fair-sched=try"]
         outargs += self.extra_opts
         outargs += args
         return outargs
