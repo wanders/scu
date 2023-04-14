@@ -22,6 +22,7 @@
 
 #define SCU_OUTPUT_FILENAME_TEMPLATE "/tmp/scu.XXXXXX"
 #define SCU_OUTPUT_FILENAME_TEMPLATE_SIZE (strlen(SCU_OUTPUT_FILENAME_TEMPLATE) + 1)
+#define SCU_OUTPUT_FILENAME_NO_REDIRECT "<INLINE>"
 
 /* Optional hook functions */
 
@@ -255,8 +256,14 @@ _scu_output_test_error(const char *file, int line, const char *msg)
 }
 
 static void
-_scu_redirect_output(char *filename, size_t len)
+_scu_configure_output_streams(char *filename, size_t len, bool redirect)
 {
+	if (!redirect)
+	{
+		strncpy(filename, SCU_OUTPUT_FILENAME_NO_REDIRECT, len);
+		return;
+	}
+
 	strncpy(filename, SCU_OUTPUT_FILENAME_TEMPLATE, len);
 	int out = mkstemp(filename);
 	assert(out >= 0);
@@ -324,12 +331,12 @@ _scu_handle_fatal_assert(void)
 static _scu_failure _failures[_SCU_MAX_FAILURES];
 
 static void
-_scu_run_test(int idx)
+_scu_run_test(int idx, bool redirect_output)
 {
 	_scu_testcase *test = _scu_module_tests[idx];
 
 	char filename[SCU_OUTPUT_FILENAME_TEMPLATE_SIZE];
-	_scu_redirect_output(filename, sizeof(filename));
+	_scu_configure_output_streams(filename, sizeof(filename), redirect_output);
 
 	VALGRIND_PRINTF("\n** SCU: Starting test \"%s\" **\n\n", test->name);
 
@@ -371,13 +378,13 @@ _scu_run_test(int idx)
 }
 
 static void
-run_tests(size_t num_tests, long int test_indices[])
+run_tests(size_t num_tests, long int test_indices[], bool redirect_output)
 {
 	_scu_cmd_fd = dup(STDOUT_FILENO);
 
 	char filename[SCU_OUTPUT_FILENAME_TEMPLATE_SIZE];
 
-	_scu_redirect_output(filename, sizeof(filename));
+	_scu_configure_output_streams(filename, sizeof(filename), redirect_output);
 
 	_scu_output_setup_start(filename);
 
@@ -386,10 +393,10 @@ run_tests(size_t num_tests, long int test_indices[])
 	_scu_output_setup_end();
 
 	for (size_t i = 0; i < num_tests; i++) {
-		_scu_run_test(test_indices[i]);
+		_scu_run_test(test_indices[i], redirect_output);
 	}
 
-	_scu_redirect_output(filename, sizeof(filename));
+	_scu_configure_output_streams(filename, sizeof(filename), redirect_output);
 
 	_scu_output_teardown_start(filename);
 
@@ -403,13 +410,15 @@ run_tests(size_t num_tests, long int test_indices[])
 typedef struct {
 	bool list;
 	bool run;
+	bool debug;
 	size_t num_tests;
 	long int test_indices[_SCU_MAX_TESTS];
 } _scu_arguments;
 
 static struct argp_option options[] = {
     {"list", 'l', 0, 0, "list available test cases", 0},
-    {"run", 'r', 0, 0, "run the test cases identified by the supplied indices", 0},
+    {"run", 'r', 0, 0, "run the test cases identified by the supplied indices, or all if none is supplied", 0},
+    {"debug", 'd', 0, 0, "shows output from tests in stdout/stderr instead of capturing them", 0},
     {0}};
 
 static error_t
@@ -424,11 +433,17 @@ parse_opt(int key, char *arg, struct argp_state *state)
 		case 'r':
 			parsed_args->run = true;
 			break;
+		case 'd':
+			parsed_args->debug = true;
+			break;
 		case ARGP_KEY_NO_ARGS:
 			if (!parsed_args->list && !parsed_args->run)
 				argp_usage(state);
-			if (parsed_args->run)
-				argp_error(state, "not enough arguments");
+			if (parsed_args->run) {
+				for (size_t i = 0; i < _scu_module_num_tests; i++) {
+					parsed_args->test_indices[parsed_args->num_tests++] = i;
+				}
+			}
 			break;
 		case ARGP_KEY_ARG: {
 			errno = 0;
@@ -442,7 +457,7 @@ parse_opt(int key, char *arg, struct argp_state *state)
 			break;
 		}
 		case ARGP_KEY_END:
-			if (!parsed_args->run && parsed_args->num_tests > 0)
+			if (!parsed_args->run && state->arg_num > 0)
 				argp_error(state, "extraneous arguments");
 			break;
 		default:
@@ -487,7 +502,7 @@ main(int argc, char *argv[])
 	if (args.list) {
 		list_tests();
 	} else if (args.run) {
-		run_tests(args.num_tests, args.test_indices);
+		run_tests(args.num_tests, args.test_indices, !args.debug);
 	}
 
 	free(_scu_module_tests);
