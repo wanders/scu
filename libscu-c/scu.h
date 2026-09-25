@@ -95,14 +95,13 @@ void _scu_register_testcase(_scu_testcase *);
 void _scu_fatal_assert_allowed(const char *, int);
 void _scu_handle_fatal_assert(void) __attribute__((noreturn));
 
-#define SCU_FAIL(message) \
+#define SCU_FAIL(message, ...)	  \
 	do { \
 		*_scu_success = false; \
 		if (*_scu_num_failures < _SCU_MAX_FAILURES) { \
 			_scu_failures[*_scu_num_failures].file = __FILE__; \
 			_scu_failures[*_scu_num_failures].line = __LINE__; \
-			strncpy(_scu_failures[*_scu_num_failures].msg, (message), _SCU_FAILURE_MESSAGE_LENGTH - 1); \
-			_scu_failures[*_scu_num_failures].msg[_SCU_FAILURE_MESSAGE_LENGTH - 1] = 0; \
+			snprintf(_scu_failures[*_scu_num_failures].msg, sizeof (_scu_failures[*_scu_num_failures].msg), (message), ##__VA_ARGS__); \
 			(*_scu_num_failures)++; \
 		} \
 	} while (0)
@@ -113,9 +112,7 @@ void _scu_handle_fatal_assert(void) __attribute__((noreturn));
 			_scu_fatal_assert_allowed(__FILE__, __LINE__); \
 		(*_scu_asserts)++; \
 		if (!(test)) { \
-			char _scu_fmsg[_SCU_FAILURE_MESSAGE_LENGTH]; \
-			snprintf(_scu_fmsg, sizeof(_scu_fmsg), (message), ##__VA_ARGS__); \
-			SCU_FAIL(_scu_fmsg); \
+			SCU_FAIL((message), ##__VA_ARGS__); \
 			if (is_fatal) \
 				_scu_handle_fatal_assert(); \
 		} \
